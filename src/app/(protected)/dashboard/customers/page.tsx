@@ -28,6 +28,11 @@ const CustomerPage = () => {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isFetching, setIsFetching] = useState(false);
+  const [errors, setErrors] = useState<{
+    name?: string;
+    favorite?: string;
+    tags?: string;
+  }>({});
 
   const fetchCustomers = async () => {
     try {
@@ -188,22 +193,6 @@ const CustomerPage = () => {
     fetchCustomers();
   };
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [debouncedSearch, filterTag]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput.length >= 3) {
-        setDebouncedSearch(searchInput);
-      } else {
-        setDebouncedSearch("");
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
   const onClickEditButton = (data: Customer) => {
     setEditingId(data.id);
     setName(data.name);
@@ -222,7 +211,35 @@ const CustomerPage = () => {
     setTagsInput("");
   };
 
+  const validateForm = () => {
+    const newErrors: {
+      name?: string;
+      favorite?: string;
+      tags?: string;
+    } = {};
+
+    if (!name.trim()) {
+      newErrors.name = "Name is required.";
+    }
+
+    if (!favorite.trim()) {
+      newErrors.favorite = "Favorite item is required.";
+    }
+
+    if (!tagsInput.trim()) {
+      newErrors.tags = "At least one interest tag is required.";
+    }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async () => {
+    const isValid = validateForm();
+
+    if (!isValid) return;
+
     setLoading(true);
 
     try {
@@ -235,6 +252,31 @@ const CustomerPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [debouncedSearch, filterTag]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput.length >= 3) {
+        setDebouncedSearch(searchInput);
+      } else {
+        setDebouncedSearch("");
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setErrors((prev) => ({
+      ...prev,
+      name: name ? undefined : prev.name,
+      favorite: favorite ? undefined : prev.favorite,
+      tags: tagsInput ? undefined : prev.tags,
+    }));
+  }, [name, favorite, tagsInput]);
 
   return (
     <div className="p-8 space-y-8">
@@ -259,30 +301,53 @@ const CustomerPage = () => {
       </div>
 
       <div className="space-y-2 max-w-md">
-        <input
-          className="border p-2 w-full"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          className="border p-2 w-full"
-          placeholder="Contact (optional)"
-          value={contact}
-          onChange={(e) => setContact(e.target.value)}
-        />
-        <input
-          className="border p-2 w-full"
-          placeholder="Favorite drink/product"
-          value={favorite}
-          onChange={(e) => setFavorite(e.target.value)}
-        />
-        <input
-          className="border p-2 w-full"
-          placeholder="Tags (comma separated)"
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
-        />
+        <div className="flex flex-col">
+          <input
+            className={`border p-2 rounded ${
+              errors.name ? "border-red-500" : ""
+            }`}
+            placeholder="Customer name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          {errors.name && (
+            <span className="text-red-500 text-xs mt-1">{errors.name}</span>
+          )}
+        </div>
+        <div className="flex flex-col">
+          <input
+            className="border p-2 w-full"
+            placeholder="Contact (optional)"
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col">
+          <input
+            className={`border p-2 rounded ${
+              errors.favorite ? "border-red-500" : ""
+            }`}
+            placeholder="Favorite item (drink or product)"
+            value={favorite}
+            onChange={(e) => setFavorite(e.target.value)}
+          />
+          {errors.favorite && (
+            <span className="text-red-500 text-xs mt-1">{errors.favorite}</span>
+          )}
+        </div>
+        <div className="flex flex-col">
+          <input
+            className={`border p-2 rounded ${
+              errors.tags ? "border-red-500" : ""
+            }`}
+            placeholder="Tags (comma separated)"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+          />
+          {errors.tags && (
+            <span className="text-red-500 text-xs mt-1">{errors.tags}</span>
+          )}
+        </div>
         <button
           onClick={handleSubmit}
           className="bg-black text-white px-4 py-2"
