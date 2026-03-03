@@ -1,25 +1,39 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/src/lib/supabase";
+import { useRouter } from "next/navigation";
 
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+  const logout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
-      if (!data.session) {
-        router.push("/login");
-      }
-    };
+  return (
+    <div className="min-h-screen flex">
+      <aside className="w-60 bg-gray-100 p-6 space-y-4">
+        <h2 className="font-bold text-lg">Mimi CRM</h2>
 
-    checkSession();
-  }, [router]);
+        <nav className="flex flex-col gap-2">
+          <Link href="/dashboard" className="hover:underline">
+            Dashboard
+          </Link>
+          <Link href="/customers" className="hover:underline">
+            Customers
+          </Link>
+        </nav>
 
-  return <>{children}</>;
+        <button onClick={logout} className="text-red-500 text-sm mt-6">
+          Logout
+        </button>
+      </aside>
+
+      <main className="flex-1">{children}</main>
+    </div>
+  );
 };
 
 export default ProtectedLayout;
