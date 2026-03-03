@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
+import LoadingOverlay from "@/src/components/loadingoverlay";
 
 type Customer = {
   id: string;
@@ -24,12 +25,15 @@ const CustomerPage = () => {
   const [search, setSearch] = useState("");
   const [filterTag, setFilterTag] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchCustomers = async () => {
-    let query = supabase
-      .from("customers")
-      .select(
-        `
+    try {
+      setLoading(true);
+      let query = supabase
+        .from("customers")
+        .select(
+          `
       id,
       name,
       contact,
@@ -38,34 +42,40 @@ const CustomerPage = () => {
         interest_tags(name)
       )
     `,
-      )
-      .order("created_at", { ascending: false });
+        )
+        .order("created_at", { ascending: false });
 
-    if (search) {
-      query = query.ilike("name", `%${search}%`);
+      if (search) {
+        query = query.ilike("name", `%${search}%`);
+      }
+
+      const { data } = await query;
+
+      if (!data) return;
+
+      let filtered = data as unknown as Customer[];
+
+      // Client-side filter by tag
+      if (filterTag) {
+        filtered = filtered.filter((customer) =>
+          customer.customer_tags?.some((ct) =>
+            ct.interest_tags?.name
+              ?.toLowerCase()
+              .includes(filterTag.toLowerCase()),
+          ),
+        );
+      }
+
+      setCustomers(filtered);
+    } catch (err) {
+      console.log(`error fetching data:: ${err}`);
+    } finally {
+      setLoading(false);
     }
-
-    const { data } = await query;
-
-    if (!data) return;
-
-    let filtered = data as unknown as Customer[];
-
-    // Client-side filter by tag
-    if (filterTag) {
-      filtered = filtered.filter((customer) =>
-        customer.customer_tags?.some((ct) =>
-          ct.interest_tags?.name
-            ?.toLowerCase()
-            .includes(filterTag.toLowerCase()),
-        ),
-      );
-    }
-
-    setCustomers(filtered);
   };
 
   const addCustomer = async () => {
+    setLoading(true);
     if (!name) return;
 
     const { data: customer } = await supabase
@@ -103,7 +113,6 @@ const CustomerPage = () => {
         tag_id: tag.id,
       });
     }
-
     setName("");
     setContact("");
     setFavorite("");
@@ -112,11 +121,13 @@ const CustomerPage = () => {
   };
 
   const deleteCustomer = async (id: string) => {
+    setLoading(true);
     await supabase.from("customers").delete().eq("id", id);
     fetchCustomers();
   };
 
   const updateCustomer = async () => {
+    setLoading(true);
     if (!editingId) return;
 
     // Update basic fields
@@ -181,6 +192,24 @@ const CustomerPage = () => {
     fetchCustomers();
   }, [search, filterTag]);
 
+  const onClickEditButton = (data: Customer) => {
+    setEditingId(data.id);
+    setName(data.name);
+    setContact(data.contact || "");
+    setFavorite(data.favorite || "");
+    setTagsInput(
+      data.customer_tags?.map((tags) => tags.interest_tags.name).join(", "),
+    );
+  };
+
+  const onClickCancelEditButton = () => {
+    setEditingId(null);
+    setName("");
+    setContact("");
+    setFavorite("");
+    setTagsInput("");
+  };
+
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-2xl font-bold">Customers</h1>
@@ -232,13 +261,7 @@ const CustomerPage = () => {
         </button>
         {editingId && (
           <button
-            onClick={() => {
-              setEditingId(null);
-              setName("");
-              setContact("");
-              setFavorite("");
-              setTagsInput("");
-            }}
+            onClick={onClickCancelEditButton}
             className="text-sm text-gray-500 ml-3"
           >
             Cancel
@@ -247,48 +270,48 @@ const CustomerPage = () => {
       </div>
 
       <div className="space-y-4">
-        {customers?.map((c) => (
-          <div key={c.id} className="border p-4 rounded">
-            <div className="font-semibold">{c.name}</div>
-            {c.contact && (
-              <div className="text-sm text-gray-600">{c.contact}</div>
-            )}
-            {c.favorite && (
-              <div className="text-sm">Favorite: {c.favorite}</div>
-            )}
+        {!loading && customers?.length === 0 ? (
+          <p className="text-gray-500">No customers found.</p>
+        ) : (
+          customers?.map((data) => (
+            <div key={data.id} className="border p-4 rounded">
+              <div className="font-semibold">{data.name}</div>
+              {data.contact && (
+                <div className="text-sm text-gray-600">{data.contact}</div>
+              )}
+              {data.favorite && (
+                <div className="text-sm">Favorite: {data.favorite}</div>
+              )}
 
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {c.customer_tags?.map((t, i) => (
-                <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded">
-                  {t.interest_tags.name}
-                </span>
-              ))}
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {data.customer_tags?.map((tags, i) => (
+                  <span
+                    key={i}
+                    className="text-xs bg-gray-200 px-2 py-1 rounded"
+                  >
+                    {tags.interest_tags.name}
+                  </span>
+                ))}
+              </div>
+
+              <button
+                onClick={() => onClickEditButton(data)}
+                className="text-blue-500 text-sm mr-3"
+              >
+                Edit
+              </button>
+
+              <button
+                onClick={() => deleteCustomer(data.id)}
+                className="text-red-500 text-sm mt-2"
+              >
+                Delete
+              </button>
             </div>
-
-            <button
-              onClick={() => {
-                setEditingId(c.id);
-                setName(c.name);
-                setContact(c.contact || "");
-                setFavorite(c.favorite || "");
-                setTagsInput(
-                  c.customer_tags?.map((t) => t.interest_tags.name).join(", "),
-                );
-              }}
-              className="text-blue-500 text-sm mr-3"
-            >
-              Edit
-            </button>
-
-            <button
-              onClick={() => deleteCustomer(c.id)}
-              className="text-red-500 text-sm mt-2"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
+          ))
+        )}
       </div>
+      <LoadingOverlay show={loading} />
     </div>
   );
 };
