@@ -22,14 +22,16 @@ const CustomerPage = () => {
   const [contact, setContact] = useState("");
   const [favorite, setFavorite] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-  const [search, setSearch] = useState("");
   const [filterTag, setFilterTag] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [isFetching, setIsFetching] = useState(false);
 
   const fetchCustomers = async () => {
     try {
-      setLoading(true);
+      setIsFetching(true);
       let query = supabase
         .from("customers")
         .select(
@@ -45,8 +47,8 @@ const CustomerPage = () => {
         )
         .order("created_at", { ascending: false });
 
-      if (search) {
-        query = query.ilike("name", `%${search}%`);
+      if (debouncedSearch) {
+        query = query.ilike("name", `%${debouncedSearch}%`);
       }
 
       const { data } = await query;
@@ -70,12 +72,11 @@ const CustomerPage = () => {
     } catch (err) {
       console.log(`error fetching data:: ${err}`);
     } finally {
-      setLoading(false);
+      setIsFetching(false);
     }
   };
 
   const addCustomer = async () => {
-    setLoading(true);
     if (!name) return;
 
     const { data: customer } = await supabase
@@ -127,7 +128,6 @@ const CustomerPage = () => {
   };
 
   const updateCustomer = async () => {
-    setLoading(true);
     if (!editingId) return;
 
     // Update basic fields
@@ -190,7 +190,19 @@ const CustomerPage = () => {
 
   useEffect(() => {
     fetchCustomers();
-  }, [search, filterTag]);
+  }, [debouncedSearch, filterTag]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput.length >= 3) {
+        setDebouncedSearch(searchInput);
+      } else {
+        setDebouncedSearch("");
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const onClickEditButton = (data: Customer) => {
     setEditingId(data.id);
@@ -210,6 +222,20 @@ const CustomerPage = () => {
     setTagsInput("");
   };
 
+  const handleSubmit = async () => {
+    setLoading(true);
+
+    try {
+      if (editingId) {
+        await updateCustomer();
+      } else {
+        await addCustomer();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-2xl font-bold">Customers</h1>
@@ -217,8 +243,8 @@ const CustomerPage = () => {
       <input
         className="border p-2 w-full max-w-md"
         placeholder="Search by name..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
       />
 
       <input
@@ -254,7 +280,7 @@ const CustomerPage = () => {
           onChange={(e) => setTagsInput(e.target.value)}
         />
         <button
-          onClick={editingId ? updateCustomer : addCustomer}
+          onClick={handleSubmit}
           className="bg-black text-white px-4 py-2"
         >
           {editingId ? "Update Customer" : "Add Customer"}
@@ -270,6 +296,12 @@ const CustomerPage = () => {
       </div>
 
       <div className="space-y-4">
+        {isFetching && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-black" />
+            Fetching data...
+          </div>
+        )}
         {!loading && customers?.length === 0 ? (
           <p className="text-gray-500">No customers found.</p>
         ) : (
