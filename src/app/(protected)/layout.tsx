@@ -12,6 +12,7 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+    router.refresh();
   };
 
   const navItems = [
