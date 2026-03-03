@@ -24,6 +24,9 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
           <Link href="/dashboard/customers" className="hover:underline">
             Customers
           </Link>
+          <Link href="/dashboard/promo-ideas" className="hover:underline">
+            Promo Ideas
+          </Link>
         </nav>
 
         <button onClick={logout} className="text-red-500 text-sm mt-6">
