@@ -7,13 +7,15 @@ Mini CRM application for PLABS Coffee Shop.
 - Authentication (Supabase)
 - Protected routing
 - Dashboard page
-- Customers module (in progress)
+- Customers CRUD
+- Promo Idea generation with OpenRouter AI
 
 ## Environment Variables
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+OPENROUTER_API_KEY=...
 ```
 
 ## Run Development Server
