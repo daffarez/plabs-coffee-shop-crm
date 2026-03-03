@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
@@ -46,4 +46,6 @@ export default function LoginPage() {
       </div>
     </div>
   );
-}
+};
+
+export default LoginPage;

@@ -4,11 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/src/lib/supabase";
 
-export default function ProtectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
@@ -24,4 +20,6 @@ export default function ProtectedLayout({
   }, [router]);
 
   return <>{children}</>;
-}
+};
+
+export default ProtectedLayout;
