@@ -240,19 +240,23 @@ const CustomerPage = () => {
     <div className="p-8 space-y-8">
       <h1 className="text-2xl font-bold">Customers</h1>
 
-      <input
-        className="border p-2 w-full max-w-md"
-        placeholder="Search by name..."
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-      />
+      <div className="bg-white p-4 rounded shadow mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <input
+            className="border p-2 w-full md:max-w-sm rounded"
+            placeholder="Search by name (min 3 chars)..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
 
-      <input
-        className="border p-2 w-full max-w-md"
-        placeholder="Filter by tag..."
-        value={filterTag}
-        onChange={(e) => setFilterTag(e.target.value)}
-      />
+          <input
+            className="border p-2 w-full md:max-w-sm rounded"
+            placeholder="Filter by tag..."
+            value={filterTag}
+            onChange={(e) => setFilterTag(e.target.value)}
+          />
+        </div>
+      </div>
 
       <div className="space-y-2 max-w-md">
         <input

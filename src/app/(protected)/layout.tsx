@@ -15,13 +15,13 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="min-h-screen flex">
       <aside className="w-60 bg-gray-100 p-6 space-y-4">
-        <h2 className="font-bold text-lg">Mimi CRM</h2>
+        <h2 className="font-bold text-lg">PLABS Coffee Shop CRM</h2>
 
         <nav className="flex flex-col gap-2">
           <Link href="/dashboard" className="hover:underline">
             Dashboard
           </Link>
-          <Link href="/customers" className="hover:underline">
+          <Link href="/dashboard/customers" className="hover:underline">
             Customers
           </Link>
         </nav>
