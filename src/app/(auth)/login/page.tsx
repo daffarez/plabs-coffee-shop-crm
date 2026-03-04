@@ -21,7 +21,11 @@ const LoginPage = () => {
       return;
     }
 
-    router.push("/dashboard");
+    router.refresh();
+
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 100);
   };
 
   return (
@@ -29,7 +33,7 @@ const LoginPage = () => {
       <div className="w-full max-w-sm p-8 bg-white rounded-2xl shadow-sm border border-[#EBE3D5]">
         <div className="text-center mb-10">
           <h1 className="text-2xl font-extrabold text-[#2D2424] tracking-tight">
-            Mimi's Kopi Kita
+            Kopi Kita
           </h1>
           <p className="text-sm font-medium text-[#7E6363] mt-1 uppercase tracking-widest">
             CRM Dashboard
