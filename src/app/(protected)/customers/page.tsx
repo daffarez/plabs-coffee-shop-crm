@@ -35,7 +35,7 @@ const CustomerPage = () => {
   });
   const [filterTag, setFilterTag] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isFetching, setIsFetching] = useState(false);
@@ -279,7 +279,20 @@ const CustomerPage = () => {
   };
 
   useEffect(() => {
-    fetchCustomers();
+    const loadData = async () => {
+      if (!loading) {
+        setIsFetching(true);
+      }
+
+      try {
+        await fetchCustomers();
+      } finally {
+        setLoading(false);
+        setIsFetching(false);
+      }
+    };
+
+    loadData();
   }, [debouncedSearch, filterTag]);
 
   useEffect(() => {
@@ -307,7 +320,7 @@ const CustomerPage = () => {
     <div className="space-y-8 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-[#2D2424] tracking-tight">
+          <h1 className="text-3xl font-bold text-[#2D2424] tracking-tight">
             Customers
           </h1>
         </div>

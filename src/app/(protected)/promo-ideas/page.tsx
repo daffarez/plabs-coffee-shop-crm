@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import {
   Sparkles,
@@ -11,9 +11,11 @@ import {
   MessageSquare,
   AlertCircle,
   CheckCircle2,
+  Info,
+  Trash2,
 } from "lucide-react";
 
-type PromoIdea = {
+export type PromoIdea = {
   theme: string;
   segment_description: string;
   why_now: string;
@@ -26,6 +28,27 @@ const PromoIdeasPage = () => {
   const [ideas, setIdeas] = useState<PromoIdea[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("latest_ai_promo");
+    if (saved) {
+      try {
+        const { ideas, createdAt } = JSON.parse(saved);
+        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+        const isExpired = new Date().getTime() - createdAt > sevenDaysInMs;
+
+        if (isExpired) {
+          localStorage.removeItem("latest_ai_promo");
+          setIdeas([]);
+        } else {
+          setIdeas(ideas);
+        }
+      } catch (e) {
+        console.error("Error loading promos", e);
+      }
+    }
+  }, []);
 
   const fetchInsights = async () => {
     const { data, error } = await supabase
@@ -67,7 +90,18 @@ const PromoIdeasPage = () => {
       const result = await res.json();
       const aiContent = result.choices?.[0]?.message?.content;
       const parsed = safeJsonParse(aiContent);
+
       setIdeas(parsed);
+
+      if (parsed && parsed.length > 0) {
+        const dataToSave = {
+          ideas: parsed,
+          createdAt: new Date().getTime(),
+        };
+
+        setIdeas(parsed);
+        localStorage.setItem("latest_ai_promo", JSON.stringify(dataToSave));
+      }
     } catch (err) {
       setError("Oops! System failed to brew your ideas. Please try again.");
     } finally {
@@ -93,6 +127,12 @@ const PromoIdeasPage = () => {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  const clearPromoIdeaData = () => {
+    localStorage.removeItem("latest_ai_promo");
+    setIdeas([]);
+    setIsClearModalOpen(false);
+  };
+
   return (
     <div className="space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -100,7 +140,7 @@ const PromoIdeasPage = () => {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D2691E]/10 text-[#D2691E] text-xs font-bold uppercase tracking-widest mb-2">
             <Sparkles size={14} /> AI Powered Insights
           </div>
-          <h1 className="text-3xl font-extrabold text-[#2D2424] tracking-tight">
+          <h1 className="text-3xl font-bold text-[#2D2424] tracking-tight">
             Global AI Promo
           </h1>
           <p className="text-[#7E6363] max-w-lg">
@@ -109,28 +149,48 @@ const PromoIdeasPage = () => {
           </p>
         </div>
 
-        <button
-          onClick={generatePromo}
-          disabled={loading}
-          className="relative group overflow-hidden bg-[#2D2424] text-white px-8 py-4 rounded-2xl font-bold transition-all hover:bg-[#433434] active:scale-95 disabled:opacity-70 shadow-xl shadow-black/10"
-        >
-          <span className="flex items-center gap-2 relative z-10">
-            {loading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Brewing Ideas...
-              </>
-            ) : (
-              <>
-                <Lightbulb
-                  size={18}
-                  className="group-hover:text-yellow-400 transition-colors"
-                />
-                Generate This Week’s Promo
-              </>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3">
+            {ideas.length > 0 && (
+              <button
+                onClick={() => setIsClearModalOpen(true)}
+                className="flex items-center justify-center w-[52px] h-[52px] md:w-auto md:px-5 rounded-2xl font-bold text-[#7E6363] hover:text-red-600 hover:bg-red-50 border border-[#EBE3D5] hover:border-red-200 transition-all active:scale-95"
+              >
+                <Trash2 size={20} className="md:mr-2" />
+                <span className="hidden md:inline">Clear</span>
+              </button>
             )}
-          </span>
-        </button>
+
+            <button
+              onClick={generatePromo}
+              disabled={loading}
+              className="relative group overflow-hidden bg-[#2D2424] text-white px-8 py-4 rounded-2xl font-bold transition-all hover:bg-[#433434] active:scale-95 disabled:opacity-70 shadow-xl shadow-black/10"
+            >
+              <span className="flex items-center gap-2 relative z-10">
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Brewing Ideas...
+                  </>
+                ) : (
+                  <>
+                    <Lightbulb
+                      size={18}
+                      className="group-hover:text-yellow-400 transition-colors"
+                    />
+                    Generate This Week’s Promo
+                  </>
+                )}
+              </span>
+            </button>
+          </div>
+
+          {/* Tooltip Info */}
+          <div className="flex items-center gap-1.5 text-[10px] text-[#7E6363]/70 font-medium italic mr-2">
+            <Info size={12} />
+            Promos are automatically cleared every 7 days
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -218,7 +278,6 @@ const PromoIdeasPage = () => {
           ))}
         </div>
       ) : (
-        /* Empty State */
         !loading && (
           <div className="py-20 text-center space-y-4">
             <div className="mx-auto w-20 h-20 bg-[#FDFCF8] rounded-full flex items-center justify-center text-[#EBE3D5]">
@@ -229,6 +288,39 @@ const PromoIdeasPage = () => {
             </p>
           </div>
         )
+      )}
+
+      {isClearModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-[#EBE3D5] animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+              <AlertCircle size={32} className="text-red-500" />
+            </div>
+
+            <h3 className="text-xl font-bold text-[#2D2424] text-center mb-2">
+              Clear Promo Idea?
+            </h3>
+            <p className="text-sm text-[#7E6363] text-center mb-8 leading-relaxed">
+              This action will delete all promo suggestions for this week. You
+              will need to regenerate to see new ideas.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={clearPromoIdeaData}
+                className="w-full py-4 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 transition-all active:scale-95"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setIsClearModalOpen(false)}
+                className="w-full py-4 bg-[#FDFCF8] text-[#7E6363] rounded-2xl font-bold border border-[#EBE3D5] hover:bg-white transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

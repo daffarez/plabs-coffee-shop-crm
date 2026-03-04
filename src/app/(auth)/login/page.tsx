@@ -11,7 +11,9 @@ const LoginPage = () => {
   const router = useRouter();
 
   const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithPassword({
+    setError(null);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -24,8 +26,8 @@ const LoginPage = () => {
     router.refresh();
 
     setTimeout(() => {
-      router.push("/dashboard");
-    }, 100);
+      window.location.href = "/dashboard";
+    }, 500);
   };
 
   return (
