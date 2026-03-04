@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Calendar,
   Target,
@@ -8,6 +10,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { PromoIdea } from "../app/(protected)/promo-ideas/page";
+import { useToastStore } from "@/src/store/usetoaststore";
 
 interface PromoIdeaCardProps {
   idea: PromoIdea;
@@ -22,6 +25,8 @@ export const PromoIdeaCard = ({
   isCopied,
   onCopy,
 }: PromoIdeaCardProps) => {
+  const { showToast } = useToastStore();
+
   const handleShareWhatsapp = (message: string) => {
     const encodedMessage = encodeURIComponent(message);
     const isMobile = /iPhone|Android/i.test(navigator.userAgent);
@@ -30,6 +35,11 @@ export const PromoIdeaCard = ({
       : `https://web.whatsapp.com/send?text=${encodedMessage}`;
 
     window.open(baseUrl, "_blank");
+  };
+
+  const handleInternalCopy = () => {
+    onCopy(idea.ready_message, index);
+    showToast("Promo message copied to clipboard!", "success");
   };
 
   return (
@@ -83,7 +93,7 @@ export const PromoIdeaCard = ({
             </button>
 
             <button
-              onClick={() => onCopy(idea.ready_message, index)}
+              onClick={handleInternalCopy}
               className="p-2 hover:bg-white/10 rounded-lg transition-all"
               title="Copy to Clipboard"
             >
@@ -99,12 +109,6 @@ export const PromoIdeaCard = ({
         <p className="text-lg font-medium leading-relaxed italic pr-8 mb-2">
           "{idea.ready_message}"
         </p>
-
-        {isCopied && (
-          <div className="inline-block bg-green-500 text-[10px] font-bold py-1 px-3 rounded-full animate-in fade-in slide-in-from-top-1">
-            TEXT COPIED!
-          </div>
-        )}
       </div>
     </div>
   );

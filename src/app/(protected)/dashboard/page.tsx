@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabase";
 import { useEffect, useState } from "react";
-import { Users, TrendingUp, Megaphone, ArrowRight } from "lucide-react";
+import {
+  Users,
+  TrendingUp,
+  Megaphone,
+  ArrowRight,
+  Copy,
+  Check,
+} from "lucide-react";
 import { StatCard } from "@/src/components/statcard";
 import { PromoIdea } from "../promo-ideas/page";
 import { ChatBotDashboard } from "@/src/components/chatbot";
@@ -20,6 +27,8 @@ const DashboardPage = () => {
   const [topInterests, setTopInterests] = useState<Interests[]>([]);
   const [suggestedPromos, setSuggestedPromos] = useState<PromoIdea[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
   const { startLoading, stopLoading } = useLoadingStore();
   const { showToast } = useToastStore();
 
@@ -56,6 +65,17 @@ const DashboardPage = () => {
     }
   };
 
+  const handleCopyPromo = async (text: string, id: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      showToast("Promo copied to clipboard!", "success");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      showToast("Failed to copy text.", "error");
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       startLoading("Gathering insights...");
@@ -71,7 +91,6 @@ const DashboardPage = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-
         if (parsed && Array.isArray(parsed.ideas) && parsed.ideas.length > 0) {
           setSuggestedPromos(parsed.ideas);
         }
@@ -93,6 +112,7 @@ const DashboardPage = () => {
         </h1>
       </div>
 
+      {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
           title="Total Customers"
@@ -140,7 +160,6 @@ const DashboardPage = () => {
                 <p className="text-[10px] text-[#7E6363] mt-2 italic line-clamp-1">
                   Target: {suggestedPromos[0].segment_description}
                 </p>
-
                 <Link
                   href="/promo-ideas"
                   className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-[#D2691E] uppercase hover:gap-2 transition-all"
@@ -155,7 +174,7 @@ const DashboardPage = () => {
                 </p>
                 <Link
                   href="/promo-ideas"
-                  className="text-[10px] bg-[#2D2424] text-white px-3 py-1.5 rounded-lg font-bold"
+                  className="text-[10px] bg-[#2D2424] text-white px-3 py-1.5 rounded-lg font-bold text-center"
                 >
                   Generate Now
                 </Link>
@@ -163,6 +182,66 @@ const DashboardPage = () => {
             )}
           </div>
         </StatCard>
+      </div>
+
+      <div className="bg-white rounded-4xl p-6 border border-[#EBE3D5] shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2.5 bg-[#FDFCF8] rounded-xl border border-[#EBE3D5]">
+            <Megaphone size={18} className="text-[#D2691E]" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-[#2D2424]">Quick Links</h3>
+            <p className="text-xs text-[#7E6363]">
+              Copy and share your latest AI promo ideas
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {suggestedPromos.length > 0 ? (
+            suggestedPromos.map((promo, index) => (
+              <button
+                key={index}
+                onClick={() =>
+                  handleCopyPromo(promo.theme || promo.ready_message, index)
+                }
+                className="flex flex-col text-left p-4 rounded-2xl border border-[#EBE3D5] bg-[#FDFCF8] hover:bg-white hover:border-[#D2691E] hover:shadow-md transition-all group"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-tighter text-[#D2691E]/60">
+                    AI Suggestion {index + 1}
+                  </span>
+                  {copiedId === index ? (
+                    <Check size={14} className="text-green-500" />
+                  ) : (
+                    <Copy
+                      size={14}
+                      className="text-[#7E6363] group-hover:text-[#D2691E]"
+                    />
+                  )}
+                </div>
+                <h4 className="font-bold text-sm text-[#2D2424] mb-1 truncate w-full">
+                  {promo.theme}
+                </h4>
+                <p className="text-[11px] text-[#7E6363] line-clamp-3 italic leading-relaxed">
+                  "{promo.ready_message || "Click to copy this promo idea."}"
+                </p>
+              </button>
+            ))
+          ) : (
+            <div className="col-span-1 md:col-span-3 py-6 text-center border-2 border-dashed border-[#EBE3D5] rounded-3xl">
+              <p className="text-sm text-[#7E6363] mb-3">
+                No AI promos found in your local storage.
+              </p>
+              <Link
+                href="/promo-ideas"
+                className="inline-flex items-center gap-2 text-xs bg-[#2D2424] text-white px-4 py-2 rounded-xl font-bold hover:bg-[#433434] transition-colors"
+              >
+                Generate Promo with AI <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="pt-2">

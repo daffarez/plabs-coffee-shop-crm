@@ -8,7 +8,7 @@ export const ChatBotDashboard = () => {
   const [messages, setMessages] = useState<{ role: string; text: string }[]>([
     {
       role: "bot",
-      text: "Halo! I am the AI Assistant of Kopi Kita. Is there anything I can help you analyze today?",
+      text: "Hello! I am the AI Assistant of Kopi Kita. Is there anything I can help you analyze today?",
     },
   ]);
   const [loading, setLoading] = useState(false);
