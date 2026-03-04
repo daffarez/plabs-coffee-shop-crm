@@ -1,8 +1,6 @@
-// src/middleware.ts
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// 1. Pastikan nama fungsinya tepat "middleware" dan di-export
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -50,7 +48,6 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-// 2. Pastikan config di-export secara terpisah
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",

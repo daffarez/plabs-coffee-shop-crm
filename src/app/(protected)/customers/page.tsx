@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
-import { LoadingOverlay } from "@/src/components/loadingoverlay";
 import { CustomerSearchFilters } from "@/src/components/customersearchfilter";
 import { CustomerList } from "@/src/components/customerlist";
 import { CustomerForm } from "@/src/components/customerform";
+import { useLoadingStore } from "@/src/store/useloadingstore";
 
 type Customer = {
   id: string;
@@ -35,11 +35,11 @@ const CustomerPage = () => {
   });
   const [filterTag, setFilterTag] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const { startLoading, stopLoading } = useLoadingStore();
 
   const { name, contact, favorite, tagsInput } = formData;
 
@@ -71,7 +71,6 @@ const CustomerPage = () => {
 
       let filtered = data as unknown as Customer[];
 
-      // Client-side filter by interests
       if (filterTag) {
         filtered = filtered.filter((customer) =>
           customer.customer_tags?.some((ct) =>
@@ -90,120 +89,114 @@ const CustomerPage = () => {
     }
   };
 
-  const addCustomer = async () => {
-    if (!name) return;
-
-    const { data: customer } = await supabase
-      .from("customers")
-      .insert({ name, contact, favorite })
-      .select()
-      .single();
-
-    if (!customer) return;
-
-    const tagList = tagsInput
+  const parseTags = (input: string): string[] => {
+    return input
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
+  };
 
-    for (const tagName of tagList) {
-      let { data: tag } = await supabase
+  const ensureTagsExist = async (tagNames: string[]): Promise<string[]> => {
+    if (tagNames.length === 0) return [];
+
+    const { data: existing, error: fetchError } = await supabase
+      .from("interest_tags")
+      .select("id, name")
+      .in("name", tagNames);
+
+    if (fetchError) throw fetchError;
+
+    const existingMap = new Map<string, string>(
+      existing?.map((tag) => [tag.name, tag.id]) || [],
+    );
+
+    const newTags = tagNames.filter((name) => !existingMap.has(name));
+
+    if (newTags.length > 0) {
+      const { data: inserted, error: insertError } = await supabase
         .from("interest_tags")
-        .select("*")
-        .eq("name", tagName)
-        .single();
+        .insert(newTags.map((name) => ({ name })))
+        .select("id, name");
 
-      if (!tag) {
-        const { data: newTag } = await supabase
-          .from("interest_tags")
-          .insert({ name: tagName })
-          .select()
-          .single();
+      if (insertError) throw insertError;
 
-        tag = newTag;
-      }
-
-      await supabase.from("customer_tags").insert({
-        customer_id: customer.id,
-        tag_id: tag.id,
+      inserted?.forEach((tag) => {
+        existingMap.set(tag.name, tag.id);
       });
     }
-    setFormData({
-      name: "",
-      contact: "",
-      favorite: "",
-      tagsInput: "",
-    });
-    fetchCustomers();
+
+    return tagNames.map((name) => existingMap.get(name)!);
+  };
+
+  const syncCustomerTags = async (customerId: string, tagIds: string[]) => {
+    await supabase.from("customer_tags").delete().eq("customer_id", customerId);
+
+    if (tagIds.length === 0) return;
+
+    await supabase.from("customer_tags").insert(
+      tagIds.map((tagId) => ({
+        customer_id: customerId,
+        tag_id: tagId,
+      })),
+    );
+  };
+
+  const saveCustomer = async () => {
+    if (!name) return;
+
+    try {
+      startLoading();
+
+      const tagNames = parseTags(tagsInput);
+      let customerId = editingId;
+
+      if (!editingId) {
+        const { data: customer, error } = await supabase
+          .from("customers")
+          .insert({ name, contact, favorite })
+          .select("id")
+          .single();
+
+        if (error || !customer) throw error;
+
+        customerId = customer.id;
+      } else {
+        const { error } = await supabase
+          .from("customers")
+          .update({ name, contact, favorite })
+          .eq("id", editingId);
+
+        if (error) throw error;
+      }
+
+      const tagIds = await ensureTagsExist(tagNames);
+
+      await syncCustomerTags(customerId!, tagIds);
+
+      setEditingId(null);
+      setFormData({
+        name: "",
+        contact: "",
+        favorite: "",
+        tagsInput: "",
+      });
+
+      await fetchCustomers();
+    } catch (err) {
+      console.error("Save failed:", err);
+    } finally {
+      stopLoading();
+    }
   };
 
   const deleteCustomer = async (id: string) => {
-    setLoading(true);
-    await supabase.from("customers").delete().eq("id", id);
-    fetchCustomers();
-  };
-
-  const updateCustomer = async () => {
-    if (!editingId) return;
-
-    // Update basic fields
-    await supabase
-      .from("customers")
-      .update({
-        name,
-        contact,
-        favorite,
-      })
-      .eq("id", editingId);
-
-    // Prepare new tag list
-    const tagList = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    // Ensure all tags exist
-    const tagIds: string[] = [];
-
-    for (const tagName of tagList) {
-      let { data: tag } = await supabase
-        .from("interest_tags")
-        .select("*")
-        .eq("name", tagName)
-        .single();
-
-      if (!tag) {
-        const { data: newTag } = await supabase
-          .from("interest_tags")
-          .insert({ name: tagName })
-          .select()
-          .single();
-
-        tag = newTag;
-      }
-
-      tagIds.push(tag.id);
+    try {
+      startLoading();
+      await supabase.from("customers").delete().eq("id", id);
+      await fetchCustomers();
+    } finally {
+      stopLoading();
     }
-
-    // Remove old relations
-    await supabase.from("customer_tags").delete().eq("customer_id", editingId);
-
-    // Insert new relations
-    for (const tagId of tagIds) {
-      await supabase.from("customer_tags").insert({
-        customer_id: editingId,
-        tag_id: tagId,
-      });
-    }
-
-    setEditingId(null);
-    setFormData({
-      name: "",
-      contact: "",
-      favorite: "",
-      tagsInput: "",
-    });
-    fetchCustomers();
   };
 
   const onClickEditButton = (data: Customer) => {
@@ -265,29 +258,29 @@ const CustomerPage = () => {
 
     if (!isValid) return;
 
-    setLoading(true);
+    startLoading();
 
     try {
-      if (editingId) {
-        await updateCustomer();
-      } else {
-        await addCustomer();
-      }
+      saveCustomer();
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
   useEffect(() => {
     const loadData = async () => {
-      if (!loading) {
+      const isFirstLoad = !customers || customers.length === 0;
+
+      if (isFirstLoad) {
+        startLoading("Fetching your coffee crew...");
+      } else {
         setIsFetching(true);
       }
 
       try {
         await fetchCustomers();
       } finally {
-        setLoading(false);
+        stopLoading();
         setIsFetching(false);
       }
     };
@@ -343,7 +336,6 @@ const CustomerPage = () => {
           onClickCancelEditButton={onClickCancelEditButton}
         />
 
-        {/* LIST SECTION */}
         <div className="lg:col-span-2 space-y-4">
           <CustomerList
             customers={customers}
@@ -353,7 +345,6 @@ const CustomerPage = () => {
           />
         </div>
       </div>
-      <LoadingOverlay show={loading} />
     </div>
   );
 };

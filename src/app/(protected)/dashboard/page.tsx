@@ -7,6 +7,7 @@ import { Users, TrendingUp, Megaphone, ArrowRight } from "lucide-react";
 import { StatCard } from "@/src/components/statcard";
 import { PromoIdea } from "../promo-ideas/page";
 import { ChatBotDashboard } from "@/src/components/chatbot";
+import { useLoadingStore } from "@/src/store/useloadingstore";
 
 type Interests = {
   name: string;
@@ -17,16 +18,16 @@ const DashboardPage = () => {
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [topInterests, setTopInterests] = useState<Interests[]>([]);
   const [suggestedPromos, setSuggestedPromos] = useState<PromoIdea[]>([]);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const { startLoading, stopLoading } = useLoadingStore();
 
   const fetchAnalytics = async () => {
-    // Total customers
     const { count } = await supabase
       .from("customers")
       .select("*", { count: "exact", head: true });
 
     setTotalCustomers(count || 0);
 
-    // Top interests
     const { data } = await supabase.from("customer_tags").select(`
         interest_tags(name)
       `);
@@ -49,7 +50,13 @@ const DashboardPage = () => {
   };
 
   useEffect(() => {
-    fetchAnalytics();
+    const init = async () => {
+      startLoading("Gathering insights...");
+      await fetchAnalytics();
+      setHasLoaded(true);
+      stopLoading();
+    };
+    init();
   }, []);
 
   useEffect(() => {
@@ -67,6 +74,8 @@ const DashboardPage = () => {
       }
     }
   }, []);
+
+  if (!hasLoaded) return <div className="min-h-screen bg-[#FDFCF8]" />;
 
   return (
     <div className="space-y-8">
