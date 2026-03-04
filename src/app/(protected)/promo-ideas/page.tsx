@@ -14,6 +14,8 @@ import {
   Info,
   Trash2,
 } from "lucide-react";
+import { ConfirmModal } from "@/src/components/confirmmodal";
+import { PromoIdeaList } from "@/src/components/promoidealist";
 
 export type PromoIdea = {
   theme: string;
@@ -144,8 +146,8 @@ const PromoIdeasPage = () => {
             Global AI Promo
           </h1>
           <p className="text-[#7E6363] max-w-lg">
-            Our AI analyzes your top customer interests to suggest
-            high-conversion promo themes and messages.
+            Our AI analyzes your top customer interests to suggest promo themes
+            and messages.
           </p>
         </div>
 
@@ -154,7 +156,7 @@ const PromoIdeasPage = () => {
             {ideas.length > 0 && (
               <button
                 onClick={() => setIsClearModalOpen(true)}
-                className="flex items-center justify-center w-[52px] h-[52px] md:w-auto md:px-5 rounded-2xl font-bold text-[#7E6363] hover:text-red-600 hover:bg-red-50 border border-[#EBE3D5] hover:border-red-200 transition-all active:scale-95"
+                className="flex items-center justify-center w-13 h-13 md:w-auto md:px-5 rounded-2xl font-bold text-[#7E6363] hover:text-red-600 hover:bg-red-50 border border-[#EBE3D5] hover:border-red-200 transition-all active:scale-95"
               >
                 <Trash2 size={20} className="md:mr-2" />
                 <span className="hidden md:inline">Clear</span>
@@ -184,8 +186,6 @@ const PromoIdeasPage = () => {
               </span>
             </button>
           </div>
-
-          {/* Tooltip Info */}
           <div className="flex items-center gap-1.5 text-[10px] text-[#7E6363]/70 font-medium italic mr-2">
             <Info size={12} />
             Promos are automatically cleared every 7 days
@@ -200,128 +200,21 @@ const PromoIdeasPage = () => {
         </div>
       )}
 
-      {ideas.length > 0 ? (
-        <div className="space-y-8 relative">
-          <div className="absolute left-10 top-10 bottom-10 w-0.5 bg-[#EBE3D5] hidden md:block" />
+      <PromoIdeaList
+        ideas={ideas}
+        loading={loading}
+        copiedIndex={copiedIndex}
+        onCopy={copyToClipboard}
+      />
 
-          {ideas.map((idea, index) => (
-            <div
-              key={index}
-              className="relative flex flex-col md:flex-row gap-8 items-start group transition-all duration-500 animate-in slide-in-from-bottom-8"
-              style={{ animationDelay: `${index * 150}ms` }}
-            >
-              <div className="z-10 shrink-0 w-20 h-20 rounded-4xl bg-white border-2 border-[#EBE3D5] flex items-center justify-center text-3xl font-black text-[#D2691E] shadow-sm group-hover:border-[#D2691E] group-hover:bg-[#FDFCF8] transition-all duration-300">
-                0{index + 1}
-              </div>
-
-              <div className="flex-1 bg-white border border-[#EBE3D5] rounded-[2.5rem] p-8 md:p-10 shadow-sm group-hover:shadow-xl group-hover:shadow-orange-900/5 transition-all duration-300">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <h2 className="text-2xl font-black text-[#2D2424] tracking-tight">
-                    {idea.theme}
-                  </h2>
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-[#FDFCF8] rounded-xl border border-[#EBE3D5] text-[#7E6363] text-xs font-bold">
-                    <Calendar size={14} className="text-[#D2691E]" />
-                    {idea.best_time_window || "Anytime"}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[#D2691E] text-[10px] font-black uppercase tracking-widest">
-                      <Target size={14} /> Target
-                    </div>
-                    <p className="text-[#7E6363] text-sm leading-relaxed">
-                      {idea.segment_description}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[#D2691E] text-[10px] font-black uppercase tracking-widest">
-                      <Lightbulb size={14} /> Why now?
-                    </div>
-                    <p className="text-[#7E6363] text-sm leading-relaxed">
-                      {idea.why_now}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative overflow-hidden bg-[#2D2424] rounded-2xl p-6 text-white group/msg transition-all">
-                  <div className="flex justify-between items-center mb-3">
-                    <div className="flex items-center gap-2 text-white/50">
-                      <MessageSquare size={14} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">
-                        Marketing Copy
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => copyToClipboard(idea.ready_message, index)}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-all"
-                    >
-                      {copiedIndex === index ? (
-                        <CheckCircle2 size={18} className="text-green-400" />
-                      ) : (
-                        <Copy size={18} className="text-white/70" />
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-lg font-medium leading-relaxed italic pr-8">
-                    "{idea.ready_message}"
-                  </p>
-
-                  {copiedIndex === index && (
-                    <div className="absolute top-4 right-14 bg-green-500 text-[10px] font-bold py-1 px-3 rounded-full animate-in fade-in slide-in-from-right-2">
-                      COPIED!
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        !loading && (
-          <div className="py-20 text-center space-y-4">
-            <div className="mx-auto w-20 h-20 bg-[#FDFCF8] rounded-full flex items-center justify-center text-[#EBE3D5]">
-              <Sparkles size={40} />
-            </div>
-            <p className="text-[#7E6363] font-medium italic">
-              Ready to grow? Generate your top 3 strategies for this week.
-            </p>
-          </div>
-        )
-      )}
-
-      {isClearModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-[#EBE3D5] animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6 mx-auto">
-              <AlertCircle size={32} className="text-red-500" />
-            </div>
-
-            <h3 className="text-xl font-bold text-[#2D2424] text-center mb-2">
-              Clear Promo Idea?
-            </h3>
-            <p className="text-sm text-[#7E6363] text-center mb-8 leading-relaxed">
-              This action will delete all promo suggestions for this week. You
-              will need to regenerate to see new ideas.
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={clearPromoIdeaData}
-                className="w-full py-4 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 transition-all active:scale-95"
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => setIsClearModalOpen(false)}
-                className="w-full py-4 bg-[#FDFCF8] text-[#7E6363] rounded-2xl font-bold border border-[#EBE3D5] hover:bg-white transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={isClearModalOpen}
+        onClose={() => setIsClearModalOpen(false)}
+        onConfirm={clearPromoIdeaData}
+        title="Clear Promo Idea?"
+        description="This action will delete all promo suggestions for this week. You will need to regenerate to see new ideas."
+        confirmText="Yes, Clear All"
+      />
     </div>
   );
 };
