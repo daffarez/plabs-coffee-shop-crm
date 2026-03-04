@@ -4,8 +4,9 @@ import Link from "next/link";
 import { supabase } from "@/src/lib/supabase";
 import { useEffect, useState } from "react";
 import { Users, TrendingUp, Megaphone, ArrowRight } from "lucide-react";
-import StatCard from "@/src/components/statcard";
+import { StatCard } from "@/src/components/statcard";
 import { PromoIdea } from "../promo-ideas/page";
+import { ChatBotDashboard } from "@/src/components/chatbot";
 
 type Interests = {
   name: string;
@@ -147,17 +148,23 @@ const DashboardPage = () => {
         </StatCard>
       </div>
 
-      <div className="pt-4">
+      <div className="flex flex-wrap gap-4">
         <Link
           href="/customers"
-          className="group inline-flex items-center gap-2 bg-[#2D2424] text-[#FDFCF8] px-6 py-3 rounded-xl font-bold hover:bg-[#433434] transition-all shadow-lg shadow-brown-900/20"
+          className="flex items-center gap-2 bg-[#2D2424] text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-[#433434] transition-all"
         >
-          Manage Customers
-          <ArrowRight
-            size={18}
-            className="group-hover:translate-x-1 transition-transform"
-          />
+          <Users size={18} /> Manage Customers
         </Link>
+        <Link
+          href="/promo-ideas"
+          className="flex items-center gap-2 bg-white border border-[#EBE3D5] text-[#2D2424] px-5 py-3 rounded-2xl font-bold text-sm hover:bg-[#FDFCF8] transition-all"
+        >
+          <Megaphone size={18} className="text-[#D2691E]" /> Generate Promo
+        </Link>
+      </div>
+
+      <div className="pt-2">
+        <ChatBotDashboard />
       </div>
     </div>
   );

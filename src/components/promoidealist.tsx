@@ -40,7 +40,7 @@ export const PromoIdeaList = ({
     <div className="space-y-8 relative">
       <div className="absolute left-10 top-10 bottom-10 w-0.5 bg-[#EBE3D5] hidden md:block" />
 
-      {ideas.map((idea, index) => (
+      {ideas?.map((idea, index) => (
         <div
           key={index}
           className="relative flex flex-col md:flex-row gap-8 items-start group transition-all duration-500 animate-in slide-in-from-bottom-8"

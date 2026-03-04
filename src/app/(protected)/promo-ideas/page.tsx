@@ -2,18 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
-import {
-  Sparkles,
-  Copy,
-  Calendar,
-  Target,
-  Lightbulb,
-  MessageSquare,
-  AlertCircle,
-  CheckCircle2,
-  Info,
-  Trash2,
-} from "lucide-react";
+import { Sparkles, Lightbulb, AlertCircle, Info, Trash2 } from "lucide-react";
 import { ConfirmModal } from "@/src/components/confirmmodal";
 import { PromoIdeaList } from "@/src/components/promoidealist";
 
@@ -83,7 +72,7 @@ const PromoIdeasPage = () => {
       setError(null);
       const tagCounts = await fetchInsights();
 
-      const res = await fetch("/api/ai-promo", {
+      const res = await fetch("/api/promo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tagCounts }),
@@ -91,18 +80,33 @@ const PromoIdeasPage = () => {
 
       const result = await res.json();
       const aiContent = result.choices?.[0]?.message?.content;
+      console.log("aiContent", aiContent);
       const parsed = safeJsonParse(aiContent);
 
-      setIdeas(parsed);
+      let validatedIdeas = [];
 
-      if (parsed && parsed.length > 0) {
-        const dataToSave = {
-          ideas: parsed,
-          createdAt: new Date().getTime(),
-        };
+      if (Array.isArray(parsed)) {
+        validatedIdeas = parsed;
+      } else if (parsed && Array.isArray(parsed.promotions)) {
+        // If AI wrapped the response inside property 'promotions'
+        validatedIdeas = parsed.promotions;
+      } else if (parsed && typeof parsed === "object") {
+        // If AI wrapped the response inside other property lain
+        const firstKey = Object.keys(parsed)[0];
+        if (Array.isArray(parsed[firstKey])) {
+          validatedIdeas = parsed[firstKey];
+        }
+      }
 
-        setIdeas(parsed);
-        localStorage.setItem("latest_ai_promo", JSON.stringify(dataToSave));
+      if (validatedIdeas.length > 0) {
+        setIdeas(validatedIdeas);
+        localStorage.setItem(
+          "latest_ai_promo",
+          JSON.stringify({
+            ideas: validatedIdeas,
+            createdAt: new Date().getTime(),
+          }),
+        );
       }
     } catch (err) {
       setError("Oops! System failed to brew your ideas. Please try again.");

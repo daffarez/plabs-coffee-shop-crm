@@ -6,7 +6,7 @@ import { Users, Sparkles, LogOut, Coffee, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const TopNav = () => {
+export const TopNav = () => {
   const [userEmail, setUserEmail] = useState<string>("User");
   const pathname = usePathname();
   const router = useRouter();
@@ -88,5 +88,3 @@ const TopNav = () => {
     </nav>
   );
 };
-
-export default TopNav;

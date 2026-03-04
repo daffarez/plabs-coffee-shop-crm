@@ -1,4 +1,4 @@
-import TopNav from "@/src/components/topnav";
+import { TopNav } from "@/src/components/topnav";
 
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   return (

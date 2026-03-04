@@ -12,7 +12,7 @@ interface StatCardProps {
   isRelative?: boolean;
 }
 
-const StatCard = ({
+export const StatCard = ({
   title,
   icon: Icon,
   iconColorClass = "text-[#D2691E]",
@@ -49,5 +49,3 @@ const StatCard = ({
     </div>
   );
 };
-
-export default StatCard;
