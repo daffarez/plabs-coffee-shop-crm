@@ -7,7 +7,7 @@ interface CustomerFiltersProps {
   setFilterTag: (value: string) => void;
 }
 
-const CustomerSearchFilters = ({
+export const CustomerSearchFilters = ({
   searchInput,
   setSearchInput,
   filterTag,
@@ -22,7 +22,7 @@ const CustomerSearchFilters = ({
         />
         <input
           className="w-full pl-10 pr-4 py-2.5 bg-[#FDFCF8] border border-[#EBE3D5] rounded-xl focus:ring-2 focus:ring-[#D2691E] outline-none transition-all text-sm text-[#2D2424] placeholder:text-[#7E6363]/50"
-          placeholder="Search by name (min 3 chars)..."
+          placeholder="Search by name (min 3 chars)"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
@@ -35,7 +35,7 @@ const CustomerSearchFilters = ({
         />
         <input
           className="w-full pl-10 pr-4 py-2.5 bg-[#FDFCF8] border border-[#EBE3D5] rounded-xl focus:ring-2 focus:ring-[#D2691E] outline-none transition-all text-sm text-[#2D2424] placeholder:text-[#7E6363]/50"
-          placeholder="Filter by tag..."
+          placeholder="Filter by interests"
           value={filterTag}
           onChange={(e) => setFilterTag(e.target.value)}
         />
@@ -43,5 +43,3 @@ const CustomerSearchFilters = ({
     </div>
   );
 };
-
-export default CustomerSearchFilters;

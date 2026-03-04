@@ -2,7 +2,7 @@ type Props = {
   show: boolean;
 };
 
-const LoadingOverlay = ({ show }: Props) => {
+export const LoadingOverlay = ({ show }: Props) => {
   if (!show) return null;
 
   return (
@@ -14,5 +14,3 @@ const LoadingOverlay = ({ show }: Props) => {
     </div>
   );
 };
-
-export default LoadingOverlay;

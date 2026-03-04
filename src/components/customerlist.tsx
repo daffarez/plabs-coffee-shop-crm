@@ -19,7 +19,7 @@ interface CustomerListProps {
   deleteCustomer: (id: string) => void;
 }
 
-const CustomerList = ({
+export const CustomerList = ({
   customers,
   isFetching,
   onClickEditButton,
@@ -141,11 +141,8 @@ const CustomerList = ({
 
         <div className="px-6 py-3 bg-[#FDFCF8] border-t border-[#EBE3D5] flex justify-between items-center text-[10px] text-[#7E6363] font-bold uppercase tracking-widest">
           <span>Total: {customers?.length || 0} Customers</span>
-          <span>PLABS Coffee CRM v1.0</span>
         </div>
       </div>
     </div>
   );
 };
-
-export default CustomerList;

@@ -5,6 +5,7 @@ import {
   MessageSquare,
   Copy,
   CheckCircle2,
+  MessageCircle,
 } from "lucide-react";
 import { PromoIdea } from "../app/(protected)/promo-ideas/page";
 
@@ -21,6 +22,16 @@ export const PromoIdeaCard = ({
   isCopied,
   onCopy,
 }: PromoIdeaCardProps) => {
+  const handleShareWhatsapp = (message: string) => {
+    const encodedMessage = encodeURIComponent(message);
+    const isMobile = /iPhone|Android/i.test(navigator.userAgent);
+    const baseUrl = isMobile
+      ? `https://api.whatsapp.com/send?text=${encodedMessage}`
+      : `https://web.whatsapp.com/send?text=${encodedMessage}`;
+
+    window.open(baseUrl, "_blank");
+  };
+
   return (
     <div className="flex-1 bg-white border border-[#EBE3D5] rounded-[2.5rem] p-8 md:p-10 shadow-sm group-hover:shadow-xl group-hover:shadow-orange-900/5 transition-all duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -56,28 +67,42 @@ export const PromoIdeaCard = ({
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2 text-white/50">
             <MessageSquare size={14} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
               Marketing Copy
             </span>
           </div>
-          <button
-            onClick={() => onCopy(idea.ready_message, index)}
-            className="p-2 hover:bg-white/10 rounded-lg transition-all"
-          >
-            {isCopied ? (
-              <CheckCircle2 size={18} className="text-green-400" />
-            ) : (
-              <Copy size={18} className="text-white/70" />
-            )}
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleShareWhatsapp(idea.ready_message)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white text-[10px] font-bold rounded-lg transition-all active:scale-95"
+              title="Share to WhatsApp"
+            >
+              <MessageCircle size={14} />
+              <span className="hidden sm:inline">Send to Whatsapp</span>
+            </button>
+
+            <button
+              onClick={() => onCopy(idea.ready_message, index)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-all"
+              title="Copy to Clipboard"
+            >
+              {isCopied ? (
+                <CheckCircle2 size={18} className="text-green-400" />
+              ) : (
+                <Copy size={18} className="text-white/70" />
+              )}
+            </button>
+          </div>
         </div>
-        <p className="text-lg font-medium leading-relaxed italic pr-8">
+
+        <p className="text-lg font-medium leading-relaxed italic pr-8 mb-2">
           "{idea.ready_message}"
         </p>
 
         {isCopied && (
-          <div className="absolute top-4 right-14 bg-green-500 text-[10px] font-bold py-1 px-3 rounded-full animate-in fade-in slide-in-from-right-2">
-            COPIED!
+          <div className="inline-block bg-green-500 text-[10px] font-bold py-1 px-3 rounded-full animate-in fade-in slide-in-from-top-1">
+            TEXT COPIED!
           </div>
         )}
       </div>

@@ -19,7 +19,7 @@ interface CustomerFormProps {
   onClickCancelEditButton: () => void;
 }
 
-const CustomerForm = ({
+export const CustomerForm = ({
   editingId,
   formData,
   errors,
@@ -152,5 +152,3 @@ const CustomerForm = ({
     </div>
   );
 };
-
-export default CustomerForm;

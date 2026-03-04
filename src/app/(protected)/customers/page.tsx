@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
-import LoadingOverlay from "@/src/components/loadingoverlay";
-import CustomerSearchFilters from "@/src/components/customersearchfilter";
-import CustomerForm from "@/src/components/customerform";
-import CustomerList from "@/src/components/customerlist";
+import { LoadingOverlay } from "@/src/components/loadingoverlay";
+import { CustomerSearchFilters } from "@/src/components/customersearchfilter";
+import { CustomerList } from "@/src/components/customerlist";
+import { CustomerForm } from "@/src/components/customerform";
 
 type Customer = {
   id: string;
@@ -71,7 +71,7 @@ const CustomerPage = () => {
 
       let filtered = data as unknown as Customer[];
 
-      // Client-side filter by tag
+      // Client-side filter by interests
       if (filterTag) {
         filtered = filtered.filter((customer) =>
           customer.customer_tags?.some((ct) =>
