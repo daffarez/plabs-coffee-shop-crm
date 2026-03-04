@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { SetStateAction, useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { CustomerSearchFilters } from "@/src/components/customersearchfilter";
 import { CustomerList } from "@/src/components/customerlist";
 import { CustomerForm } from "@/src/components/customerform";
 import { useLoadingStore } from "@/src/store/useloadingstore";
+import { useToastStore } from "@/src/store/usetoaststore";
 
 type Customer = {
   id: string;
@@ -37,53 +38,57 @@ const CustomerPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedTag, setDebouncedTag] = useState("");
   const [isFetching, setIsFetching] = useState(false);
+  const [isFilter, setIsFilter] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageSize = 10;
+
   const { startLoading, stopLoading } = useLoadingStore();
+  const { showToast } = useToastStore();
 
   const { name, contact, favorite, tagsInput } = formData;
 
   const fetchCustomers = async () => {
     try {
       setIsFetching(true);
+
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
       let query = supabase
         .from("customers")
         .select(
-          `
-      id,
-      name,
-      contact,
-      favorite,
-      customer_tags(
-        interest_tags(name)
-      )
-    `,
+          `id, name, contact, favorite, customer_tags(interest_tags(name))`,
+          { count: "exact" },
         )
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (debouncedSearch) {
         query = query.ilike("name", `%${debouncedSearch}%`);
       }
 
-      const { data } = await query;
-
-      if (!data) return;
+      const { data, count, error } = await query;
+      if (error) throw error;
 
       let filtered = data as unknown as Customer[];
-
-      if (filterTag) {
+      if (debouncedTag) {
         filtered = filtered.filter((customer) =>
           customer.customer_tags?.some((ct) =>
             ct.interest_tags?.name
-              ?.toLowerCase()
-              .includes(filterTag.toLowerCase()),
+              .toLowerCase()
+              .includes(debouncedTag.toLowerCase()),
           ),
         );
       }
 
       setCustomers(filtered);
+      setTotalCount(count || 0);
     } catch (err) {
-      console.log(`error fetching data:: ${err}`);
+      showToast("Gagal memuat data.", "error");
     } finally {
       setIsFetching(false);
     }
@@ -144,49 +149,35 @@ const CustomerPage = () => {
   const saveCustomer = async () => {
     if (!name) return;
 
-    try {
-      startLoading();
+    const tagNames = parseTags(tagsInput);
+    let customerId = editingId;
 
-      const tagNames = parseTags(tagsInput);
-      let customerId = editingId;
+    if (!editingId) {
+      const { data: customer, error } = await supabase
+        .from("customers")
+        .insert({ name, contact, favorite })
+        .select("id")
+        .single();
 
-      if (!editingId) {
-        const { data: customer, error } = await supabase
-          .from("customers")
-          .insert({ name, contact, favorite })
-          .select("id")
-          .single();
+      if (error || !customer) throw error;
+      customerId = customer.id;
+    } else {
+      const { error } = await supabase
+        .from("customers")
+        .update({ name, contact, favorite })
+        .eq("id", editingId);
 
-        if (error || !customer) throw error;
-
-        customerId = customer.id;
-      } else {
-        const { error } = await supabase
-          .from("customers")
-          .update({ name, contact, favorite })
-          .eq("id", editingId);
-
-        if (error) throw error;
-      }
-
-      const tagIds = await ensureTagsExist(tagNames);
-
-      await syncCustomerTags(customerId!, tagIds);
-
-      setEditingId(null);
-      setFormData({
-        name: "",
-        contact: "",
-        favorite: "",
-        tagsInput: "",
-      });
-
-      await fetchCustomers();
-    } catch (err) {
-      console.error("Save failed:", err);
-    } finally {
-      stopLoading();
+      if (error) throw error;
     }
+
+    const tagIds = await ensureTagsExist(tagNames);
+    await syncCustomerTags(customerId!, tagIds);
+
+    setEditingId(null);
+    setFormData({ name: "", contact: "", favorite: "", tagsInput: "" });
+
+    showToast("Data saved successfully.", "success");
+    await fetchCustomers();
   };
 
   const deleteCustomer = async (id: string) => {
@@ -194,6 +185,9 @@ const CustomerPage = () => {
       startLoading();
       await supabase.from("customers").delete().eq("id", id);
       await fetchCustomers();
+    } catch (err) {
+      console.error("Delete customer failed:", err);
+      showToast("Something went wrong.", "error");
     } finally {
       stopLoading();
     }
@@ -255,50 +249,57 @@ const CustomerPage = () => {
 
   const handleSubmit = async () => {
     const isValid = validateForm();
-
     if (!isValid) return;
 
-    startLoading();
+    startLoading(editingId ? "Saving changes..." : "Adding new customer...");
 
     try {
-      saveCustomer();
+      await saveCustomer();
+    } catch (err) {
+      showToast("Failed to save data.", "error");
     } finally {
       stopLoading();
     }
   };
 
+  const handleDebounce = (
+    input: string,
+    debounceFunction: (value: SetStateAction<string>) => void,
+  ) => {
+    if (input.length >= 3) {
+      debounceFunction(input);
+    } else {
+      debounceFunction("");
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
-      const isFirstLoad = !customers || customers.length === 0;
-
-      if (isFirstLoad) {
+      if (!isFilter) {
         startLoading("Fetching your coffee crew...");
-      } else {
-        setIsFetching(true);
       }
 
       try {
         await fetchCustomers();
       } finally {
         stopLoading();
-        setIsFetching(false);
+        setIsFilter(false);
       }
     };
 
     loadData();
-  }, [debouncedSearch, filterTag]);
+  }, [debouncedSearch, debouncedTag, currentPage]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput.length >= 3) {
-        setDebouncedSearch(searchInput);
-      } else {
-        setDebouncedSearch("");
-      }
+      setIsFilter(true);
+      setCurrentPage(1);
+      handleDebounce(searchInput, setDebouncedSearch);
+      handleDebounce(filterTag, setDebouncedTag);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, filterTag]); // Berjalan jika salah satu berubah
 
   useEffect(() => {
     setErrors((prev) => ({
@@ -342,6 +343,10 @@ const CustomerPage = () => {
             isFetching={isFetching}
             onClickEditButton={onClickEditButton}
             deleteCustomer={deleteCustomer}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
           />
         </div>
       </div>

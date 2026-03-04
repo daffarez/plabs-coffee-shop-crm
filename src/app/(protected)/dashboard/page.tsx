@@ -8,6 +8,7 @@ import { StatCard } from "@/src/components/statcard";
 import { PromoIdea } from "../promo-ideas/page";
 import { ChatBotDashboard } from "@/src/components/chatbot";
 import { useLoadingStore } from "@/src/store/useloadingstore";
+import { useToastStore } from "@/src/store/usetoaststore";
 
 type Interests = {
   name: string;
@@ -20,32 +21,38 @@ const DashboardPage = () => {
   const [suggestedPromos, setSuggestedPromos] = useState<PromoIdea[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
   const { startLoading, stopLoading } = useLoadingStore();
+  const { showToast } = useToastStore();
 
   const fetchAnalytics = async () => {
-    const { count } = await supabase
-      .from("customers")
-      .select("*", { count: "exact", head: true });
+    try {
+      const { count } = await supabase
+        .from("customers")
+        .select("*", { count: "exact", head: true });
 
-    setTotalCustomers(count || 0);
+      setTotalCustomers(count || 0);
 
-    const { data } = await supabase.from("customer_tags").select(`
+      const { data } = await supabase.from("customer_tags").select(`
         interest_tags(name)
       `);
 
-    if (data) {
-      const counts: Record<string, number> = {};
-      data.forEach((item: any) => {
-        const tagName = item.interest_tags?.name;
-        if (!tagName) return;
-        counts[tagName] = (counts[tagName] || 0) + 1;
-      });
+      if (data) {
+        const counts: Record<string, number> = {};
+        data.forEach((item: any) => {
+          const tagName = item.interest_tags?.name;
+          if (!tagName) return;
+          counts[tagName] = (counts[tagName] || 0) + 1;
+        });
 
-      const sorted = Object.entries(counts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 3);
+        const sorted = Object.entries(counts)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3);
 
-      setTopInterests(sorted);
+        setTopInterests(sorted);
+      }
+    } catch (err) {
+      console.error("Error fetch analytic data:", err);
+      showToast("Something went wrong.", "error");
     }
   };
 
@@ -70,6 +77,7 @@ const DashboardPage = () => {
         }
       } catch (e) {
         console.error("Error parsing dashboard promo:", e);
+        showToast("Something went wrong.", "error");
         setSuggestedPromos([]);
       }
     }
@@ -155,21 +163,6 @@ const DashboardPage = () => {
             )}
           </div>
         </StatCard>
-      </div>
-
-      <div className="flex flex-wrap gap-4">
-        <Link
-          href="/customers"
-          className="flex items-center gap-2 bg-[#2D2424] text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-[#433434] transition-all"
-        >
-          <Users size={18} /> Manage Customers
-        </Link>
-        <Link
-          href="/promo-ideas"
-          className="flex items-center gap-2 bg-white border border-[#EBE3D5] text-[#2D2424] px-5 py-3 rounded-2xl font-bold text-sm hover:bg-[#FDFCF8] transition-all"
-        >
-          <Megaphone size={18} className="text-[#D2691E]" /> Generate Promo
-        </Link>
       </div>
 
       <div className="pt-2">

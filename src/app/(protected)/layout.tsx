@@ -1,4 +1,5 @@
 import { LoadingOverlay } from "@/src/components/loadingoverlay";
+import { Toast } from "@/src/components/toast";
 import { TopNav } from "@/src/components/topnav";
 
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
@@ -7,6 +8,7 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
       <TopNav />
       <main className="max-w-7xl mx-auto px-6 pt-28 pb-10">{children}</main>
       <LoadingOverlay />
+      <Toast />
     </div>
   );
 };

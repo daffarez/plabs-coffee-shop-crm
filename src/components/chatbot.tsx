@@ -8,7 +8,7 @@ export const ChatBotDashboard = () => {
   const [messages, setMessages] = useState<{ role: string; text: string }[]>([
     {
       role: "bot",
-      text: "Halo! I am an AI Assistant of Kopi Kita. Is there anything I can help you analyze today?",
+      text: "Halo! I am the AI Assistant of Kopi Kita. Is there anything I can help you analyze today?",
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -62,7 +62,7 @@ export const ChatBotDashboard = () => {
             onFocus={() => setIsExpanded(true)}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="Tanyakan sesuatu pada AI Assistant..."
+            placeholder="Ask something to AI Assistant."
             className="w-full bg-[#FDFCF8] border border-[#EBE3D5] rounded-2xl px-5 py-3 text-sm outline-none focus:border-[#D2691E] transition-all"
           />
           <button

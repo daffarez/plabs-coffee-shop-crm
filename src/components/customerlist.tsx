@@ -1,4 +1,6 @@
 import { Edit3, Trash2, Coffee, User, MoreVertical } from "lucide-react";
+import { Pagination } from "./pagination";
+import { Dispatch, SetStateAction } from "react";
 
 type Customer = {
   id: string;
@@ -17,6 +19,10 @@ interface CustomerListProps {
   isFetching: boolean;
   onClickEditButton: (data: Customer) => void;
   deleteCustomer: (id: string) => void;
+  totalCount: number;
+  pageSize: number;
+  currentPage: number;
+  setCurrentPage: Dispatch<SetStateAction<number>>;
 }
 
 export const CustomerList = ({
@@ -24,6 +30,10 @@ export const CustomerList = ({
   isFetching,
   onClickEditButton,
   deleteCustomer,
+  totalCount,
+  pageSize,
+  currentPage,
+  setCurrentPage
 }: CustomerListProps) => {
   return (
     <div className="space-y-4">
@@ -143,6 +153,12 @@ export const CustomerList = ({
           <span>Total: {customers?.length || 0} Customers</span>
         </div>
       </div>
+      <Pagination
+        totalCount={totalCount}
+        pageSize={pageSize}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+      />
     </div>
   );
 };

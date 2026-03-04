@@ -5,6 +5,7 @@ import { supabase } from "@/src/lib/supabase";
 import { Sparkles, Lightbulb, AlertCircle, Info, Trash2 } from "lucide-react";
 import { ConfirmModal } from "@/src/components/confirmmodal";
 import { PromoIdeaList } from "@/src/components/promoidealist";
+import { useToastStore } from "@/src/store/usetoaststore";
 
 export type PromoIdea = {
   theme: string;
@@ -20,6 +21,7 @@ const PromoIdeasPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const { showToast } = useToastStore();
 
   useEffect(() => {
     const saved = localStorage.getItem("latest_ai_promo");
@@ -80,7 +82,6 @@ const PromoIdeasPage = () => {
 
       const result = await res.json();
       const aiContent = result.choices?.[0]?.message?.content;
-      console.log("aiContent", aiContent);
       const parsed = safeJsonParse(aiContent);
 
       let validatedIdeas = [];
@@ -110,6 +111,7 @@ const PromoIdeasPage = () => {
       }
     } catch (err) {
       setError("Oops! System failed to brew your ideas. Please try again.");
+      showToast("Something went wrong.", "error");
     } finally {
       setLoading(false);
     }
@@ -123,6 +125,7 @@ const PromoIdeasPage = () => {
         .trim();
       return JSON.parse(cleanString);
     } catch (error) {
+      showToast("Something went wrong.", "error");
       return [];
     }
   };
