@@ -18,7 +18,7 @@ interface CustomerListProps {
   customers: Customer[] | undefined;
   isFetching: boolean;
   onClickEditButton: (data: Customer) => void;
-  deleteCustomer: (id: string) => void;
+  onClickDeleteButton: (data: Customer) => void;
   totalCount: number;
   pageSize: number;
   currentPage: number;
@@ -29,11 +29,11 @@ export const CustomerList = ({
   customers,
   isFetching,
   onClickEditButton,
-  deleteCustomer,
+  onClickDeleteButton,
   totalCount,
   pageSize,
   currentPage,
-  setCurrentPage
+  setCurrentPage,
 }: CustomerListProps) => {
   return (
     <div className="space-y-4">
@@ -134,7 +134,7 @@ export const CustomerList = ({
                           <Edit3 size={16} />
                         </button>
                         <button
-                          onClick={() => deleteCustomer(data.id)}
+                          onClick={() => onClickDeleteButton(data)}
                           className="p-2 text-[#7E6363] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete"
                         >

@@ -7,6 +7,7 @@ import { CustomerList } from "@/src/components/customerlist";
 import { CustomerForm } from "@/src/components/customerform";
 import { useLoadingStore } from "@/src/store/useloadingstore";
 import { useToastStore } from "@/src/store/usetoaststore";
+import { ConfirmModal } from "@/src/components/confirmmodal";
 
 type Customer = {
   id: string;
@@ -44,6 +45,11 @@ const CustomerPage = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
+    null,
+  );
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   const pageSize = 10;
 
   const { startLoading, stopLoading } = useLoadingStore();
@@ -180,17 +186,34 @@ const CustomerPage = () => {
     await fetchCustomers();
   };
 
-  const deleteCustomer = async (id: string) => {
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return;
+
+    setIsDeleteModalOpen(false);
+    startLoading(`Deleting ${customerToDelete.name}...`);
+
     try {
-      startLoading();
-      await supabase.from("customers").delete().eq("id", id);
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .eq("id", customerToDelete.id);
+
+      if (error) throw error;
+
+      showToast("Customer data has been successfully deleted.", "success");
       await fetchCustomers();
     } catch (err) {
-      console.error("Delete customer failed:", err);
-      showToast("Something went wrong.", "error");
+      showToast("Failed to delete data. Please try again.", "error");
+      console.error(err);
     } finally {
       stopLoading();
+      setCustomerToDelete(null);
     }
+  };
+
+  const onClickDeleteButton = (customer: Customer) => {
+    setCustomerToDelete(customer);
+    setIsDeleteModalOpen(true);
   };
 
   const onClickEditButton = (data: Customer) => {
@@ -299,7 +322,7 @@ const CustomerPage = () => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchInput, filterTag]); // Berjalan jika salah satu berubah
+  }, [searchInput, filterTag]);
 
   useEffect(() => {
     setErrors((prev) => ({
@@ -342,7 +365,7 @@ const CustomerPage = () => {
             customers={customers}
             isFetching={isFetching}
             onClickEditButton={onClickEditButton}
-            deleteCustomer={deleteCustomer}
+            onClickDeleteButton={onClickDeleteButton}
             totalCount={totalCount}
             pageSize={pageSize}
             currentPage={currentPage}
@@ -350,6 +373,20 @@ const CustomerPage = () => {
           />
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setCustomerToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Remove Customer?"
+        description={`Are you sure you want to delete "${customerToDelete?.name}"? This action cannot be undone. All data associated with this customer will be lost.`}
+        confirmText="Delete Now"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 };
