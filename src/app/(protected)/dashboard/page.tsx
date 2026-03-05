@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { supabase } from "@/src/lib/supabase";
 import { useEffect, useState } from "react";
 import {
   Users,
@@ -16,11 +15,10 @@ import { PromoIdea } from "../promo-ideas/page";
 import { ChatBotDashboard } from "@/src/components/chatbot";
 import { useLoadingStore } from "@/src/store/useloadingstore";
 import { useToastStore } from "@/src/store/usetoaststore";
-
-type Interests = {
-  name: string;
-  count: number;
-};
+import {
+  fetchAnalyticsData,
+  Interests,
+} from "@/src/services/analytics.service";
 
 const DashboardPage = () => {
   const [totalCustomers, setTotalCustomers] = useState(0);
@@ -32,35 +30,13 @@ const DashboardPage = () => {
   const { startLoading, stopLoading } = useLoadingStore();
   const { showToast } = useToastStore();
 
-  const fetchAnalytics = async () => {
+  const loadAnalytics = async () => {
     try {
-      const { count } = await supabase
-        .from("customers")
-        .select("*", { count: "exact", head: true });
-
-      setTotalCustomers(count || 0);
-
-      const { data } = await supabase.from("customer_tags").select(`
-        interest_tags(name)
-      `);
-
-      if (data) {
-        const counts: Record<string, number> = {};
-        data.forEach((item: any) => {
-          const tagName = item.interest_tags?.name;
-          if (!tagName) return;
-          counts[tagName] = (counts[tagName] || 0) + 1;
-        });
-
-        const sorted = Object.entries(counts)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 3);
-
-        setTopInterests(sorted);
-      }
+      const result = await fetchAnalyticsData();
+      setTotalCustomers(result.totalCustomers);
+      setTopInterests(result.topInterests);
     } catch (err) {
-      console.error("Error fetch analytic data:", err);
+      console.error(err);
       showToast("Something went wrong.", "error");
     }
   };
@@ -71,7 +47,7 @@ const DashboardPage = () => {
       setCopiedId(id);
       showToast("Promo copied to clipboard!", "success");
       setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
+    } catch {
       showToast("Failed to copy text.", "error");
     }
   };
@@ -79,7 +55,7 @@ const DashboardPage = () => {
   useEffect(() => {
     const init = async () => {
       startLoading("Gathering insights...");
-      await fetchAnalytics();
+      await loadAnalytics();
       setHasLoaded(true);
       stopLoading();
     };
@@ -88,57 +64,67 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const saved = localStorage.getItem("latest_ai_promo");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && Array.isArray(parsed.ideas) && parsed.ideas.length > 0) {
-          setSuggestedPromos(parsed.ideas);
-        }
-      } catch (e) {
-        console.error("Error parsing dashboard promo:", e);
-        showToast("Something went wrong.", "error");
-        setSuggestedPromos([]);
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed?.ideas?.length) {
+        setSuggestedPromos(parsed.ideas);
       }
+    } catch {
+      showToast("Something went wrong.", "error");
     }
   }, []);
 
   if (!hasLoaded) return <div className="min-h-screen bg-[#FDFCF8]" />;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-[#2D2424] tracking-tight">
-          Dashboard Overview
-        </h1>
+    <div className="space-y-10 pb-12">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-[#2D2424] tracking-tight">
+            Dashboard Overview
+          </h1>
+          <p className="text-sm text-[#7E6363] mt-1">
+            Monitoring your coffee shop activity
+          </p>
+        </div>
       </div>
 
-      {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
           title="Total Customers"
           icon={Users}
-          iconColorClass="text-blue-600"
-          bgColorClass="bg-blue-50"
+          iconColorClass="text-[#D2691E]"
+          bgColorClass="bg-[#FDFCF8] border-[#EBE3D5]"
           badgeText="Lifetime"
-          badgeColorClass="text-blue-600 bg-blue-50"
         >
-          <p className="text-3xl font-bold text-[#2D2424]">{totalCustomers}</p>
+          <p className="text-4xl font-bold text-[#2D2424] mt-2 tracking-tighter">
+            {totalCustomers}
+          </p>
         </StatCard>
 
-        <StatCard title="Top Interests" icon={TrendingUp} badgeText="Popular">
-          <div className="space-y-2 mt-2">
+        <StatCard
+          title="Top Interests"
+          icon={TrendingUp}
+          iconColorClass="text-[#D2691E]"
+          badgeText="Popular"
+        >
+          <div className="space-y-3 mt-4">
             {topInterests.map((item) => (
-              <div
-                key={item.name}
-                className="flex justify-between items-center text-sm"
-              >
-                <span className="text-[#2D2424] font-medium flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#D2691E]/40" />
-                  {item.name}
-                </span>
-                <span className="text-[#7E6363] font-bold bg-[#FDFCF8] px-2 py-0.5 rounded border border-[#EBE3D5]">
-                  {item.count}
-                </span>
+              <div key={item.name} className="flex flex-col gap-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#7E6363] font-medium">
+                    {item.name}
+                  </span>
+                  <span className="font-bold text-[#2D2424]">{item.count}</span>
+                </div>
+                <div className="w-full bg-[#EBE3D5]/30 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-[#D2691E] h-full rounded-full transition-all duration-500"
+                    style={{ width: `${(item.count / totalCustomers) * 100}%` }}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -147,104 +133,67 @@ const DashboardPage = () => {
         <StatCard
           title="Suggested Campaign"
           icon={Megaphone}
-          iconColorClass="text-purple-600"
-          bgColorClass="bg-purple-50"
-          isRelative={true}
+          iconColorClass="text-[#D2691E]"
         >
-          <div className="mt-2 min-h-15">
-            {suggestedPromos.length > 0 ? (
-              <>
-                <p className="text-[#2D2424] font-bold leading-tight line-clamp-2">
+          <div className="mt-4 flex flex-col h-full justify-between">
+            {suggestedPromos.length ? (
+              <div className="p-4 bg-[#FDFCF8] border border-[#EBE3D5] rounded-xl">
+                <p className="font-bold text-[#2D2424] text-lg leading-tight">
                   {suggestedPromos[0].theme}
                 </p>
-                <p className="text-[10px] text-[#7E6363] mt-2 italic line-clamp-1">
-                  Target: {suggestedPromos[0].segment_description}
-                </p>
                 <Link
                   href="/promo-ideas"
-                  className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-[#D2691E] uppercase hover:gap-2 transition-all"
+                  className="text-xs text-[#D2691E] font-bold mt-3 flex items-center gap-1 hover:underline"
                 >
-                  View All <ArrowRight size={10} />
-                </Link>
-              </>
-            ) : (
-              <div className="flex flex-col py-2">
-                <p className="text-[10px] text-[#7E6363] italic mb-2">
-                  No promo ideas yet.
-                </p>
-                <Link
-                  href="/promo-ideas"
-                  className="text-[10px] bg-[#2D2424] text-white px-3 py-1.5 rounded-lg font-bold text-center"
-                >
-                  Generate Now
+                  View All Ideas <ArrowRight size={14} />
                 </Link>
               </div>
+            ) : (
+              <Link
+                href="/promo-ideas"
+                className="inline-flex items-center justify-center p-4 border-2 border-dashed border-[#EBE3D5] rounded-xl text-[#7E6363] hover:border-[#D2691E] hover:text-[#D2691E] transition-all font-medium"
+              >
+                + Generate Promo
+              </Link>
             )}
           </div>
         </StatCard>
       </div>
 
-      <div className="bg-white rounded-4xl p-6 border border-[#EBE3D5] shadow-sm">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-[#FDFCF8] rounded-xl border border-[#EBE3D5]">
-            <Megaphone size={18} className="text-[#D2691E]" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-[#2D2424]">Quick Links</h3>
-            <p className="text-xs text-[#7E6363]">
-              Copy and share your latest AI promo ideas
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {suggestedPromos.length > 0 ? (
-            suggestedPromos.map((promo, index) => (
-              <button
-                key={index}
-                onClick={() =>
-                  handleCopyPromo(promo.theme || promo.ready_message, index)
-                }
-                className="flex flex-col text-left p-4 rounded-2xl border border-[#EBE3D5] bg-[#FDFCF8] hover:bg-white hover:border-[#D2691E] hover:shadow-md transition-all group"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-black uppercase tracking-tighter text-[#D2691E]/60">
-                    AI Suggestion {index + 1}
-                  </span>
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-[#2D2424] flex items-center gap-2">
+          Quick Links
+        </h2>
+        <div className="grid md:grid-cols-3 gap-5">
+          {suggestedPromos.map((promo, index) => (
+            <button
+              key={index}
+              onClick={() => handleCopyPromo(promo.ready_message, index)}
+              className="group relative p-5 bg-white border border-[#EBE3D5] rounded-2xl text-left hover:border-[#D2691E] hover:shadow-lg hover:shadow-orange-900/5 transition-all"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <Megaphone size={20} className="text-[#D2691E]" />
+                <div className="text-[#D2691E] opacity-0 group-hover:opacity-100 transition-opacity">
                   {copiedId === index ? (
-                    <Check size={14} className="text-green-500" />
+                    <Check size={18} />
                   ) : (
-                    <Copy
-                      size={14}
-                      className="text-[#7E6363] group-hover:text-[#D2691E]"
-                    />
+                    <Copy size={18} />
                   )}
                 </div>
-                <h4 className="font-bold text-sm text-[#2D2424] mb-1 truncate w-full">
-                  {promo.theme}
-                </h4>
-                <p className="text-[11px] text-[#7E6363] line-clamp-3 italic leading-relaxed">
-                  "{promo.ready_message || "Click to copy this promo idea."}"
-                </p>
-              </button>
-            ))
-          ) : (
-            <div className="col-span-1 md:col-span-3 py-6 text-center border-2 border-dashed border-[#EBE3D5] rounded-3xl">
-              <p className="text-sm text-[#7E6363] mb-3">
-                No AI promos found in your local storage.
+              </div>
+              <p className="font-bold text-[#2D2424] mb-2">{promo.theme}</p>
+              <p className="text-sm text-[#7E6363] italic leading-relaxed">
+                "{promo.ready_message}"
               </p>
-              <Link
-                href="/promo-ideas"
-                className="inline-flex items-center gap-2 text-xs bg-[#2D2424] text-white px-4 py-2 rounded-xl font-bold hover:bg-[#433434] transition-colors"
-              >
-                Generate Promo with AI <ArrowRight size={14} />
-              </Link>
-            </div>
-          )}
+              <div className="mt-4 text-[10px] text-[#D2691E] font-bold uppercase opacity-0 group-hover:opacity-100 transition-all">
+                Click to copy message
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="pt-2">
+      <div className="pt-6 border-t border-[#EBE3D5]">
         <ChatBotDashboard />
       </div>
     </div>

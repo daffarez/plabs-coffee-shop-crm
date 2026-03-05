@@ -26,7 +26,6 @@ export const StatCard = ({
     <div
       className={`bg-white border border-[#EBE3D5] p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow ${isRelative ? "relative overflow-hidden" : ""}`}
     >
-      {/* Decorative circle for AI/Campaign cards */}
       {isRelative && (
         <div className="absolute top-0 right-0 w-24 h-24 bg-[#D2691E]/5 rounded-full -mr-8 -mt-8" />
       )}

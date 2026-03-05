@@ -1,12 +1,4 @@
-import {
-  Calendar,
-  Target,
-  Lightbulb,
-  MessageSquare,
-  Copy,
-  CheckCircle2,
-  Sparkles,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { PromoIdea } from "../app/(protected)/promo-ideas/page";
 import { PromoIdeaCard } from "./promoideacard";
 

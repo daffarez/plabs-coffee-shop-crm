@@ -1,4 +1,4 @@
-import { Edit3, Trash2, Coffee, User, MoreVertical } from "lucide-react";
+import { Edit3, Trash2, Coffee, User } from "lucide-react";
 import { Pagination } from "./pagination";
 import { Dispatch, SetStateAction } from "react";
 

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Bot, ChevronDown, ChevronUp } from "lucide-react";
 
 export const ChatBotDashboard = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -50,7 +50,6 @@ export const ChatBotDashboard = () => {
     <div
       className={`transition-all duration-500 ease-in-out bg-white rounded-[2.5rem] border border-[#EBE3D5] shadow-sm overflow-hidden ${isExpanded ? "h-125" : "h-25"}`}
     >
-      {/* Mini Header / Input Row */}
       <div className="p-6 flex items-center gap-4 h-25">
         <div className="bg-[#2D2424] p-3 rounded-2xl shrink-0">
           <Bot size={20} className="text-[#D2691E]" />
@@ -90,11 +89,10 @@ export const ChatBotDashboard = () => {
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] p-4 rounded-3xl text-xs font-medium leading-relaxed shadow-sm whitespace-pre-wrap ${
-                    m.role === "user"
-                      ? "bg-[#D2691E] text-white rounded-tr-none ml-auto"
-                      : "bg-white border border-[#EBE3D5] text-[#2D2424] rounded-tl-none"
-                  }`}
+                  className={`max-w-[85%] p-4 rounded-3xl text-xs font-medium leading-relaxed shadow-sm whitespace-pre-wrap ${m.role === "user"
+                    ? "bg-[#D2691E] text-white rounded-tr-none ml-auto"
+                    : "bg-white border border-[#EBE3D5] text-[#2D2424] rounded-tl-none"
+                    }`}
                 >
                   {m.text}
                 </div>

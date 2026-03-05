@@ -8,6 +8,7 @@ import { CustomerForm } from "@/src/components/customerform";
 import { useLoadingStore } from "@/src/store/useloadingstore";
 import { useToastStore } from "@/src/store/usetoaststore";
 import { ConfirmModal } from "@/src/components/confirmmodal";
+import { saveCustomer, deleteCustomer } from "@/src/services/customer.service";
 
 type Customer = {
   id: string;
@@ -152,40 +153,6 @@ const CustomerPage = () => {
     );
   };
 
-  const saveCustomer = async () => {
-    if (!name) return;
-
-    const tagNames = parseTags(tagsInput);
-    let customerId = editingId;
-
-    if (!editingId) {
-      const { data: customer, error } = await supabase
-        .from("customers")
-        .insert({ name, contact, favorite })
-        .select("id")
-        .single();
-
-      if (error || !customer) throw error;
-      customerId = customer.id;
-    } else {
-      const { error } = await supabase
-        .from("customers")
-        .update({ name, contact, favorite })
-        .eq("id", editingId);
-
-      if (error) throw error;
-    }
-
-    const tagIds = await ensureTagsExist(tagNames);
-    await syncCustomerTags(customerId!, tagIds);
-
-    setEditingId(null);
-    setFormData({ name: "", contact: "", favorite: "", tagsInput: "" });
-
-    showToast("Data saved successfully.", "success");
-    await fetchCustomers();
-  };
-
   const handleConfirmDelete = async () => {
     if (!customerToDelete) return;
 
@@ -193,18 +160,11 @@ const CustomerPage = () => {
     startLoading(`Deleting ${customerToDelete.name}...`);
 
     try {
-      const { error } = await supabase
-        .from("customers")
-        .delete()
-        .eq("id", customerToDelete.id);
-
-      if (error) throw error;
-
+      await deleteCustomer(customerToDelete.id);
       showToast("Customer data has been successfully deleted.", "success");
       await fetchCustomers();
-    } catch (err) {
-      showToast("Failed to delete data. Please try again.", "error");
-      console.error(err);
+    } catch {
+      showToast("Failed to delete data.", "error");
     } finally {
       stopLoading();
       setCustomerToDelete(null);
@@ -277,8 +237,20 @@ const CustomerPage = () => {
     startLoading(editingId ? "Saving changes..." : "Adding new customer...");
 
     try {
-      await saveCustomer();
-    } catch (err) {
+      await saveCustomer({
+        id: editingId,
+        name,
+        contact,
+        favorite,
+        tagsInput,
+      });
+
+      setEditingId(null);
+      setFormData({ name: "", contact: "", favorite: "", tagsInput: "" });
+
+      showToast("Data saved successfully.", "success");
+      await fetchCustomers();
+    } catch {
       showToast("Failed to save data.", "error");
     } finally {
       stopLoading();
