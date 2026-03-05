@@ -48,33 +48,40 @@ export const ChatBotDashboard = () => {
 
   return (
     <div
-      className={`transition-all duration-500 ease-in-out bg-white rounded-[2.5rem] border border-[#EBE3D5] shadow-sm overflow-hidden ${isExpanded ? "h-125" : "h-25"}`}
+      className={`transition-all duration-500 ease-in-out bg-white rounded-[2.5rem] border border-[#EBE3D5] shadow-sm overflow-hidden ${
+        isExpanded ? "h-125" : "h-25"
+      }`}
     >
-      <div className="p-6 flex items-center gap-4 h-25">
-        <div className="bg-[#2D2424] p-3 rounded-2xl shrink-0">
+      <div className="p-4 md:p-6 flex items-center gap-2 md:gap-4 h-25">
+        {/* BOT ICON - Sembunyikan di mobile sangat kecil jika perlu ruang */}
+        <div className="bg-[#2D2424] p-2.5 md:p-3 rounded-2xl shrink-0">
           <Bot size={20} className="text-[#D2691E]" />
         </div>
 
-        <div className="flex-1 relative">
+        {/* INPUT GROUP - Sekarang menggunakan flex untuk memisahkan input dan tombol */}
+        <div className="flex-1 flex items-center gap-2 min-w-0">
           <input
             value={input}
             onFocus={() => setIsExpanded(true)}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="Ask something to AI Assistant."
-            className="w-full bg-[#FDFCF8] border border-[#EBE3D5] rounded-2xl px-5 py-3 text-sm outline-none focus:border-[#D2691E] transition-all"
+            placeholder="Ask AI Assistant"
+            className="flex-1 min-w-0 bg-[#FDFCF8] border border-[#EBE3D5] rounded-2xl px-4 py-3 text-sm outline-none focus:border-[#D2691E] transition-all"
           />
+
           <button
             onClick={handleSendMessage}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-[#2D2424] text-white rounded-xl hover:bg-[#D2691E] transition-all"
+            disabled={!input.trim()}
+            className="shrink-0 p-3 bg-[#2D2424] text-white rounded-2xl hover:bg-[#D2691E] transition-all disabled:opacity-30 disabled:hover:bg-[#2D2424]"
           >
-            <Send size={16} />
+            <Send size={18} />
           </button>
         </div>
 
+        {/* TOGGLE EXPAND */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="p-3 hover:bg-[#FDFCF8] rounded-xl text-[#7E6363] transition-all"
+          className="shrink-0 p-2 hover:bg-[#FDFCF8] rounded-xl text-[#7E6363] transition-all"
         >
           {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
@@ -82,24 +89,29 @@ export const ChatBotDashboard = () => {
 
       {isExpanded && (
         <div className="flex flex-col h-100 border-t border-[#EBE3D5] bg-[#FDFCF8]/30">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4"
+          >
             {messages.map((m, i) => (
               <div
                 key={i}
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] p-4 rounded-3xl text-xs font-medium leading-relaxed shadow-sm whitespace-pre-wrap ${m.role === "user"
-                    ? "bg-[#D2691E] text-white rounded-tr-none ml-auto"
-                    : "bg-white border border-[#EBE3D5] text-[#2D2424] rounded-tl-none"
-                    }`}
+                  className={`max-w-[85%] md:max-w-[75%] p-4 rounded-3xl text-xs font-medium leading-relaxed shadow-sm whitespace-pre-wrap ${
+                    m.role === "user"
+                      ? "bg-[#D2691E] text-white rounded-tr-none ml-auto"
+                      : "bg-white border border-[#EBE3D5] text-[#2D2424] rounded-tl-none"
+                  }`}
                 >
                   {m.text}
                 </div>
               </div>
             ))}
             {loading && (
-              <div className="text-[10px] font-bold text-[#D2691E] animate-pulse">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-[#D2691E] animate-pulse">
+                <span className="w-1.5 h-1.5 bg-[#D2691E] rounded-full" />
                 AI is thinking...
               </div>
             )}

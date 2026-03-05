@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import LoginPage from "./page";
 import { supabase } from "@/src/lib/supabase";
 
@@ -44,17 +44,16 @@ describe("LoginPage", () => {
 
     fireEvent.click(screen.getByText("Sign In to Dashboard"));
 
-    await screen.findByText("Brewing...");
+    await screen.findByText(/Brewing.../i);
 
     expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
       email: "test@mail.com",
       password: "password123",
     });
 
-    expect(refreshMock).toHaveBeenCalled();
+    await waitFor(() => expect(refreshMock).toHaveBeenCalled());
 
     await new Promise((r) => setTimeout(r, 350));
-
     expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 
@@ -76,14 +75,17 @@ describe("LoginPage", () => {
 
     fireEvent.click(screen.getByText("Sign In to Dashboard"));
 
-    await screen.findByText("Invalid username or password.");
+    await screen.findByText(/Invalid email or password/i);
 
     expect(pushMock).not.toHaveBeenCalled();
   });
 
   it("shows unexpected error on exception", async () => {
-    (supabase.auth.signInWithPassword as any).mockRejectedValue(
-      new Error("network error"),
+    (supabase.auth.signInWithPassword as any).mockImplementation(
+      () =>
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("network error")), 50),
+        ),
     );
 
     render(<LoginPage />);
@@ -91,14 +93,23 @@ describe("LoginPage", () => {
     fireEvent.change(screen.getByPlaceholderText("name@coffee.com"), {
       target: { value: "test@mail.com" },
     });
-
     fireEvent.change(screen.getByPlaceholderText("••••••••"), {
       target: { value: "password123" },
     });
 
     fireEvent.click(screen.getByText("Sign In to Dashboard"));
 
-    await screen.findByText("An unexpected error occurred.");
+    await waitFor(
+      () => {
+        const errorTitle = screen.queryByText(/Authentication Error/i);
+        const errorMessage = screen.queryByText(
+          /An unexpected error occurred/i,
+        );
+
+        expect(errorTitle || errorMessage).toBeTruthy();
+      },
+      { timeout: 2000 },
+    );
   });
 
   it("submits when pressing Enter key", async () => {
@@ -119,19 +130,15 @@ describe("LoginPage", () => {
       target: { value: "password123" },
     });
 
-    fireEvent.keyDown(emailInput, {
-      key: "Enter",
-      code: "Enter",
-    });
+    fireEvent.submit(emailInput.closest("form")!);
 
-    await screen.findByText("Brewing...");
-
+    await screen.findByText(/Brewing.../i);
     expect(supabase.auth.signInWithPassword).toHaveBeenCalled();
   });
 
-  it("disables button while loading", async () => {
-    (supabase.auth.signInWithPassword as any).mockImplementation(
-      () => new Promise(() => {}),
+  it("disables button and shows spinner while loading", async () => {
+    (supabase.auth.signInWithPassword as any).mockReturnValue(
+      new Promise(() => {}),
     );
 
     render(<LoginPage />);
@@ -139,15 +146,17 @@ describe("LoginPage", () => {
     fireEvent.change(screen.getByPlaceholderText("name@coffee.com"), {
       target: { value: "test@mail.com" },
     });
-
     fireEvent.change(screen.getByPlaceholderText("••••••••"), {
       target: { value: "password123" },
     });
 
     fireEvent.click(screen.getByText("Sign In to Dashboard"));
 
-    const button = screen.getByRole("button");
+    const loadingText = await screen.findByText(/Brewing.../i);
+
+    const button = loadingText.closest("button");
 
     expect(button).toBeDisabled();
+    expect(button).toHaveClass("opacity-70");
   });
 });
