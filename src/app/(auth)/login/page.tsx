@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
+import { Coffee, Lock, Mail } from "lucide-react"; // Tambahkan icon agar lebih premium
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -25,13 +26,12 @@ export default function LoginPage() {
       );
 
       if (authError) {
-        setError("Invalid username or password.");
+        setError("Invalid email or password.");
         setIsLoading(false);
         return;
       }
 
       router.refresh();
-
       setTimeout(() => {
         router.push("/dashboard");
       }, 300);
@@ -42,104 +42,117 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8]">
-      <div className="w-full max-w-sm p-8 bg-white rounded-2xl shadow-sm border border-[#EBE3D5]">
-        <div className="text-center mb-10">
-          <h1 className="text-2xl font-extrabold text-[#2D2424] tracking-tight">
-            Kopi Kita
-          </h1>
-          <p className="text-sm font-medium text-[#7E6363] mt-1 uppercase tracking-widest">
-            CRM Dashboard
-          </p>
-        </div>
-
-        <form
-          onSubmit={handleLogin}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !isLoading) {
-              handleLogin(e);
-            }
-          }}
-          className="space-y-4"
-        >
-          <div>
-            <label className="text-xs font-semibold text-[#2D2424] uppercase ml-1">
-              Email Address
-            </label>
-            <input
-              type="email"
-              required
-              name="email"
-              autoComplete="email"
-              className="mt-1 w-full px-4 py-3 bg-[#FDFCF8] border border-[#EBE3D5] rounded-xl focus:ring-2 focus:ring-[#D2691E] focus:border-transparent outline-none transition-all placeholder:text-gray-400 text-[#2D2424]"
-              placeholder="name@coffee.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+    <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] p-4 md:p-6">
+      <div className="w-full max-w-sm bg-white rounded-4xl shadow-xl shadow-orange-900/5 border border-[#EBE3D5] overflow-hidden">
+        <div className="p-8 md:p-10">
+          <div className="text-center mb-10">
+            <h1 className="text-2xl font-extrabold text-[#2D2424] tracking-tight">
+              Kopi Kita
+            </h1>
+            <p className="text-[10px] font-bold text-[#7E6363] mt-1 uppercase tracking-[0.2em]">
+              CRM Dashboard System
+            </p>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-[#2D2424] uppercase ml-1">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              name="password"
-              autoComplete="current-password"
-              className="mt-1 w-full px-4 py-3 bg-[#FDFCF8] border border-[#EBE3D5] rounded-xl focus:ring-2 focus:ring-[#D2691E] focus:border-transparent outline-none transition-all placeholder:text-gray-400 text-[#2D2424]"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full bg-[#2D2424] text-[#FDFCF8] font-bold py-3 rounded-xl transform transition-all active:scale-[0.98] shadow-md shadow-orange-900/10 mt-2 flex justify-center items-center ${
-              isLoading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#433434]"
-            }`}
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Brewing...
-              </span>
-            ) : (
-              "Sign In to Dashboard"
-            )}
-          </button>
-
-          {error && (
-            <div className="mt-4 rounded-xl border-l-4 border-red-500 bg-red-50 p-4 text-red-800 text-xs animate-in fade-in slide-in-from-top-1">
-              <p className="font-bold">Authentication Error</p>
-              <p className="opacity-90">{error}</p>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-[#2D2424] uppercase tracking-wider ml-1">
+                Email Address
+              </label>
+              <div className="relative group">
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7E6363] group-focus-within:text-[#D2691E] transition-colors"
+                  size={18}
+                />
+                <input
+                  type="email"
+                  required
+                  name="email"
+                  autoComplete="email"
+                  className="w-full pl-12 pr-4 py-3.5 bg-[#FDFCF8] border border-[#EBE3D5] rounded-2xl focus:ring-4 focus:ring-[#D2691E]/10 focus:border-[#D2691E] outline-none transition-all text-base md:text-sm text-[#2D2424] placeholder:text-gray-300"
+                  placeholder="name@coffee.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
             </div>
-          )}
-        </form>
 
-        <p className="text-center text-[10px] text-[#7E6363] mt-8 uppercase tracking-widest font-bold">
-          &copy; 2026 Daffarez Elguska.
-        </p>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-[#2D2424] uppercase tracking-wider ml-1">
+                Password
+              </label>
+              <div className="relative group">
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7E6363] group-focus-within:text-[#D2691E] transition-colors"
+                  size={18}
+                />
+                <input
+                  type="password"
+                  required
+                  name="password"
+                  autoComplete="current-password"
+                  className="w-full pl-12 pr-4 py-3.5 bg-[#FDFCF8] border border-[#EBE3D5] rounded-2xl focus:ring-4 focus:ring-[#D2691E]/10 focus:border-[#D2691E] outline-none transition-all text-base md:text-sm text-[#2D2424] placeholder:text-gray-300"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full bg-[#2D2424] text-[#FDFCF8] font-bold py-4 rounded-2xl transform transition-all active:scale-[0.97] shadow-lg shadow-black/10 mt-4 flex justify-center items-center gap-3 ${
+                isLoading
+                  ? "opacity-70 cursor-not-allowed"
+                  : "hover:bg-[#433434] hover:-translate-y-0.5"
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 text-[#D2691E]"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  <span>Brewing...</span>
+                </>
+              ) : (
+                "Sign In to Dashboard"
+              )}
+            </button>
+
+            {error && (
+              <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-800 text-xs animate-in fade-in zoom-in-95 duration-300">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                  <p className="font-bold">Authentication Error</p>
+                </div>
+                <p className="opacity-90 ml-3.5">{error}</p>
+              </div>
+            )}
+          </form>
+
+          <div className="mt-10 pt-6 border-t border-dashed border-[#EBE3D5] text-center">
+            <p className="text-[9px] text-[#7E6363] uppercase tracking-[0.25em] font-bold opacity-60">
+              &copy; 2026 Daffarez Elguska
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
