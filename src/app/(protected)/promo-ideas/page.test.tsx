@@ -1,229 +1,171 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import PromoIdeasPage from "./page";
+import { insightService } from "@/src/services/insight.service";
 
-const mockToast = vi.fn();
-
-vi.mock("@/src/store/usetoaststore", () => ({
-  useToastStore: () => ({
-    showToast: mockToast,
-  }),
-}));
-
-vi.mock("@/src/lib/supabase", () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn().mockResolvedValue({
-        data: [
-          { interest_tags: { name: "coffee" } },
-          { interest_tags: { name: "coffee" } },
-          { interest_tags: { name: "pastry" } },
-        ],
-        error: null,
-      }),
-    })),
+vi.mock("@/src/services/insight.service", () => ({
+  insightService: {
+    getStoredPromo: vi.fn(),
+    fetchInsights: vi.fn(),
+    generatePromo: vi.fn(),
+    savePromo: vi.fn(),
+    clearPromo: vi.fn(),
+    safeJsonParse: vi.fn(),
   },
 }));
 
-vi.mock("@/src/components/promoidealist", () => ({
-  PromoIdeaList: ({ ideas, onCopy }: any) => (
-    <div>
-      {ideas.map((idea: any, index: number) => (
-        <button key={index} onClick={() => onCopy(idea.ready_message, index)}>
-          {idea.theme}
-        </button>
-      ))}
-    </div>
-  ),
+vi.mock("@/src/store/usetoaststore", () => ({
+  useToastStore: () => ({
+    showToast: vi.fn(),
+  }),
 }));
 
-vi.mock("@/src/components/confirmmodal", () => ({
-  ConfirmModal: ({ isOpen, onConfirm }: any) =>
-    isOpen ? <button onClick={onConfirm}>Confirm</button> : null,
+vi.mock("@/src/store/useloadingstore", () => ({
+  useLoadingStore: () => ({
+    startLoading: vi.fn(),
+    stopLoading: vi.fn(),
+  }),
 }));
 
-
-import PromoIdeasPage from "./page";
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("PromoIdeasPage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-  });
-
-  it("renders base UI", () => {
-    render(<PromoIdeasPage />);
-    expect(screen.getByText("Global AI Promo")).toBeInTheDocument();
-    expect(screen.getByText("Generate This Week’s Promo")).toBeInTheDocument();
-  });
-
-  it("loads valid localStorage promo", () => {
-    localStorage.setItem(
-      "latest_ai_promo",
-      JSON.stringify({
-        ideas: [{ theme: "Caramel Week", ready_message: "Hi!" }],
-        createdAt: Date.now(),
-      }),
-    );
+  it("loads stored promo on mount", async () => {
+    (insightService.getStoredPromo as any).mockReturnValue([
+      {
+        theme: "Stored Theme",
+        segment_description: "desc",
+        why_now: "why",
+        ready_message: "msg",
+      },
+    ]);
 
     render(<PromoIdeasPage />);
 
-    expect(screen.getByText("Caramel Week")).toBeInTheDocument();
-  });
-
-  it("clears expired localStorage promo", () => {
-    localStorage.setItem(
-      "latest_ai_promo",
-      JSON.stringify({
-        ideas: [{ theme: "Old Promo", ready_message: "Hi!" }],
-        createdAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
-      }),
-    );
-
-    render(<PromoIdeasPage />);
-    expect(screen.queryByText("Old Promo")).not.toBeInTheDocument();
+    expect(await screen.findByText("Stored Theme")).toBeInTheDocument();
   });
 
   it("generates promo successfully", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify([
-                {
-                  theme: "New Promo",
-                  segment_description: "coffee lovers",
-                  why_now: "Trending",
-                  ready_message: "Buy now!",
-                },
-              ]),
-            },
-          },
-        ],
-      }),
+    (insightService.fetchInsights as any).mockResolvedValue({ coffee: 10 });
+
+    (insightService.generatePromo as any).mockResolvedValue({
+      choices: [{ message: { content: "dummy" } }],
     });
 
-    render(<PromoIdeasPage />);
-
-    fireEvent.click(screen.getByText("Generate This Week’s Promo"));
-
-    await waitFor(() => {
-      expect(screen.getByText("New Promo")).toBeInTheDocument();
-    });
-
-    expect(localStorage.getItem("latest_ai_promo")).toBeTruthy();
-  });
-
-  it("handles wrapped AI response format", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                promotions: [
-                  {
-                    theme: "Wrapped Promo",
-                    segment_description: "",
-                    why_now: "",
-                    ready_message: "Hello!",
-                  },
-                ],
-              }),
-            },
-          },
-        ],
-      }),
-    });
-
-    render(<PromoIdeasPage />);
-    fireEvent.click(screen.getByText("Generate This Week’s Promo"));
-
-    await waitFor(() => {
-      expect(screen.getByText("Wrapped Promo")).toBeInTheDocument();
-    });
-  });
-
-  it("handles generate error", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error("fail"));
-
-    render(<PromoIdeasPage />);
-    fireEvent.click(screen.getByText("Generate This Week’s Promo"));
-
-    await waitFor(() => {
-      expect(screen.getByText(/System failed/)).toBeInTheDocument();
-      expect(mockToast).toHaveBeenCalledWith("Something went wrong.", "error");
-    });
-  });
-
-  it("handles invalid AI JSON safely", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: "```json invalid json```",
-            },
-          },
-        ],
-      }),
-    });
-
-    render(<PromoIdeasPage />);
-    fireEvent.click(screen.getByText("Generate This Week’s Promo"));
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalled();
-    });
-  });
-
-  it("copies promo to clipboard", async () => {
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: vi.fn(),
+    (insightService.safeJsonParse as any).mockReturnValue([
+      {
+        theme: "Promo",
+        segment_description: "desc",
+        why_now: "why",
+        ready_message: "msg",
       },
-    });
-
-    localStorage.setItem(
-      "latest_ai_promo",
-      JSON.stringify({
-        ideas: [{ theme: "Copy Me", ready_message: "Hello!" }],
-        createdAt: Date.now(),
-      }),
-    );
+    ]);
 
     render(<PromoIdeasPage />);
 
-    fireEvent.click(screen.getByText("Copy Me"));
+    fireEvent.click(screen.getByText(/Generate This Week’s Promo/i));
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Hello!");
+    expect(await screen.findByText("Promo")).toBeInTheDocument();
+
+    expect(insightService.savePromo).toHaveBeenCalled();
+  });
+
+  it("handles wrapped promotions property", async () => {
+    (insightService.fetchInsights as any).mockResolvedValue({ coffee: 10 });
+
+    (insightService.generatePromo as any).mockResolvedValue({
+      choices: [{ message: { content: "dummy" } }],
+    });
+
+    (insightService.safeJsonParse as any).mockReturnValue({
+      promotions: [
+        {
+          theme: "Wrapped Promo",
+          segment_description: "desc",
+          why_now: "why",
+          ready_message: "msg",
+        },
+      ],
+    });
+
+    render(<PromoIdeasPage />);
+
+    fireEvent.click(screen.getByText(/Generate This Week’s Promo/i));
+
+    expect(await screen.findByText("Wrapped Promo")).toBeInTheDocument();
+  });
+
+  it("handles unknown object wrapper", async () => {
+    (insightService.fetchInsights as any).mockResolvedValue({ coffee: 10 });
+
+    (insightService.generatePromo as any).mockResolvedValue({
+      choices: [{ message: { content: "dummy" } }],
+    });
+
+    (insightService.safeJsonParse as any).mockReturnValue({
+      data: [
+        {
+          theme: "Unknown Wrapped",
+          segment_description: "desc",
+          why_now: "why",
+          ready_message: "msg",
+        },
+      ],
+    });
+
+    render(<PromoIdeasPage />);
+
+    fireEvent.click(screen.getByText(/Generate This Week’s Promo/i));
+
+    expect(await screen.findByText("Unknown Wrapped")).toBeInTheDocument();
+  });
+
+  it("shows error when generate fails", async () => {
+    (insightService.fetchInsights as any).mockRejectedValue(new Error("fail"));
+
+    render(<PromoIdeasPage />);
+
+    fireEvent.click(screen.getByText(/Generate This Week’s Promo/i));
+
+    expect(
+      await screen.findByText(/System failed to brew your ideas/i),
+    ).toBeInTheDocument();
   });
 
   it("clears promo using modal", async () => {
-    localStorage.setItem(
-      "latest_ai_promo",
-      JSON.stringify({
-        ideas: [{ theme: "Clear Me", ready_message: "Hi!" }],
-        createdAt: Date.now(),
-      }),
+    (insightService.getStoredPromo as any).mockReturnValue([
+      {
+        theme: "Clear Me",
+        segment_description: "desc",
+        why_now: "why",
+        ready_message: "msg",
+      },
+    ]);
+
+    render(<PromoIdeasPage />);
+
+    const clearButton = await screen.findByRole("button", { name: /clear/i });
+
+    fireEvent.click(clearButton);
+
+    fireEvent.click(screen.getByText(/Yes, Clear All/i));
+
+    expect(insightService.clearPromo).toHaveBeenCalled();
+  });
+
+  it("disables button when loading", async () => {
+    (insightService.fetchInsights as any).mockImplementation(
+      () => new Promise(() => {}),
     );
 
     render(<PromoIdeasPage />);
 
-    expect(await screen.findByText("Clear")).toBeInTheDocument();
+    const button = screen.getByText(/Generate This Week’s Promo/i);
 
-    const buttons = screen.getAllByRole("button");
-    const clearButton = buttons.find((btn) =>
-      btn.className.includes("hover:text-red-600"),
-    );
+    fireEvent.click(button);
 
-    expect(clearButton).toBeTruthy();
-
-    fireEvent.click(clearButton!);
-
-    const confirmBtn = await screen.findByText("Confirm");
-    fireEvent.click(confirmBtn);
-
-    expect(localStorage.getItem("latest_ai_promo")).toBeNull();
+    expect(button.closest("button")).toBeDisabled();
   });
 });
