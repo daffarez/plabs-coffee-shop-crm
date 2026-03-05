@@ -144,10 +144,9 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     const promoButton = await screen.findByRole("button", {
-      name: /AI Suggestion/i,
+      name: /Copy Me/i,
     });
-
-    fireEvent.click(promoButton);
+    fireEvent.click(promoButton.closest("button")!);
 
     await waitFor(() => {
       expect(writeTextMock).toHaveBeenCalledWith("Message");
@@ -186,10 +185,9 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     const promoButton = await screen.findByRole("button", {
-      name: /AI Suggestion/i,
+      name: /Fail Copy/i,
     });
-
-    fireEvent.click(promoButton);
+    fireEvent.click(promoButton.closest("button")!);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith("Failed to copy text.", "error");

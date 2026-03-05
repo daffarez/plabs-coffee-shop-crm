@@ -1,15 +1,7 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import LoginPage from "./page";
 import { supabase } from "@/src/lib/supabase";
-import { useRouter } from "next/navigation";
-
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(() => ({
-    refresh: vi.fn(),
-    push: vi.fn(),
-  })),
-}));
 
 vi.mock("@/src/lib/supabase", () => ({
   supabase: {
@@ -19,79 +11,143 @@ vi.mock("@/src/lib/supabase", () => ({
   },
 }));
 
-vi.mock("@/src/store/useloadingstore", () => ({
-  useLoadingStore: () => ({
-    startLoading: vi.fn(),
-    stopLoading: vi.fn(),
+const pushMock = vi.fn();
+const refreshMock = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: pushMock,
+    refresh: refreshMock,
   }),
 }));
 
-vi.mock("@/src/store/usetoaststore", () => ({
-  useToastStore: () => ({
-    showToast: vi.fn(),
-  }),
-}));
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("LoginPage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("renders login form correctly", () => {
-    render(<LoginPage />);
-    expect(screen.getByText(/Sign In to Dashboard/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("name@coffee.com")).toBeInTheDocument();
-  });
-
-  it("handles successful login and refreshes page", async () => {
-    const mockRefresh = vi.fn();
-    (useRouter as any).mockReturnValue({ refresh: mockRefresh, push: vi.fn() });
-
+  it("logs in successfully and redirects", async () => {
     (supabase.auth.signInWithPassword as any).mockResolvedValue({
-      data: { user: { id: "123" } },
+      data: { user: {} },
       error: null,
     });
 
     render(<LoginPage />);
 
     fireEvent.change(screen.getByPlaceholderText("name@coffee.com"), {
-      target: { value: "test@example.com" },
+      target: { value: "test@mail.com" },
     });
+
     fireEvent.change(screen.getByPlaceholderText("••••••••"), {
       target: { value: "password123" },
     });
 
-    const submitBtn = screen.getByRole("button", {
-      name: /Sign In to Dashboard/i,
-    });
-    fireEvent.click(submitBtn);
+    fireEvent.click(screen.getByText("Sign In to Dashboard"));
 
-    await waitFor(() => {
-      expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
-        email: "test@example.com",
-        password: "password123",
-      });
-      expect(mockRefresh).toHaveBeenCalled();
+    await screen.findByText("Brewing...");
+
+    expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: "test@mail.com",
+      password: "password123",
     });
+
+    expect(refreshMock).toHaveBeenCalled();
+
+    await new Promise((r) => setTimeout(r, 350));
+
+    expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 
-  it("displays error message on invalid credentials", async () => {
+  it("shows error when auth fails", async () => {
     (supabase.auth.signInWithPassword as any).mockResolvedValue({
       data: null,
-      error: { message: "Invalid login credentials" },
+      error: { message: "Invalid" },
     });
 
     render(<LoginPage />);
 
-    const submitBtn = screen.getByRole("button", {
-      name: /Sign In to Dashboard/i,
+    fireEvent.change(screen.getByPlaceholderText("name@coffee.com"), {
+      target: { value: "wrong@mail.com" },
     });
-    fireEvent.click(submitBtn);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Invalid username or password/i),
-      ).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+      target: { value: "wrongpass" },
     });
+
+    fireEvent.click(screen.getByText("Sign In to Dashboard"));
+
+    await screen.findByText("Invalid username or password.");
+
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("shows unexpected error on exception", async () => {
+    (supabase.auth.signInWithPassword as any).mockRejectedValue(
+      new Error("network error"),
+    );
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("name@coffee.com"), {
+      target: { value: "test@mail.com" },
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+      target: { value: "password123" },
+    });
+
+    fireEvent.click(screen.getByText("Sign In to Dashboard"));
+
+    await screen.findByText("An unexpected error occurred.");
+  });
+
+  it("submits when pressing Enter key", async () => {
+    (supabase.auth.signInWithPassword as any).mockResolvedValue({
+      data: { user: {} },
+      error: null,
+    });
+
+    render(<LoginPage />);
+
+    const emailInput = screen.getByPlaceholderText("name@coffee.com");
+
+    fireEvent.change(emailInput, {
+      target: { value: "test@mail.com" },
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+      target: { value: "password123" },
+    });
+
+    fireEvent.keyDown(emailInput, {
+      key: "Enter",
+      code: "Enter",
+    });
+
+    await screen.findByText("Brewing...");
+
+    expect(supabase.auth.signInWithPassword).toHaveBeenCalled();
+  });
+
+  it("disables button while loading", async () => {
+    (supabase.auth.signInWithPassword as any).mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("name@coffee.com"), {
+      target: { value: "test@mail.com" },
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+      target: { value: "password123" },
+    });
+
+    fireEvent.click(screen.getByText("Sign In to Dashboard"));
+
+    const button = screen.getByRole("button");
+
+    expect(button).toBeDisabled();
   });
 });

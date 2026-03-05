@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/src/lib/supabase";
 import { Sparkles, Lightbulb, AlertCircle, Info, Trash2 } from "lucide-react";
 import { ConfirmModal } from "@/src/components/confirmmodal";
 import { PromoIdeaList } from "@/src/components/promoidealist";
 import { useToastStore } from "@/src/store/usetoaststore";
+import { insightService } from "@/src/services/insight.service";
+import { useLoadingStore } from "@/src/store/useloadingstore";
 
 export type PromoIdea = {
   theme: string;
@@ -21,78 +22,40 @@ const PromoIdeasPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+
   const { showToast } = useToastStore();
+  const { startLoading, stopLoading } = useLoadingStore();
 
   useEffect(() => {
-    const saved = localStorage.getItem("latest_ai_promo");
-    if (saved) {
-      try {
-        const { ideas, createdAt } = JSON.parse(saved);
-        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
-        const isExpired = new Date().getTime() - createdAt > sevenDaysInMs;
+    startLoading();
 
-        if (isExpired) {
-          localStorage.removeItem("latest_ai_promo");
-          setIdeas([]);
-        } else {
-          setIdeas(ideas);
-        }
-      } catch (e) {
-        console.error("Error loading promos", e);
-      }
-    }
+    const timer = setTimeout(() => {
+      const storedIdeas = insightService.getStoredPromo();
+      setIdeas(storedIdeas);
+      stopLoading();
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, []);
-
-  const fetchInsights = async () => {
-    const { data, error } = await supabase
-      .from("customer_tags")
-      .select(`interest_tags(name)`);
-
-    if (error || !data) return {};
-
-    const counts: Record<string, number> = {};
-    data.forEach((item: any) => {
-      const tag = item.interest_tags?.name;
-      if (tag) counts[tag] = (counts[tag] || 0) + 1;
-    });
-
-    return Object.entries(counts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 3)
-      .reduce(
-        (obj, [key, value]) => {
-          obj[key] = value;
-          return obj;
-        },
-        {} as Record<string, number>,
-      );
-  };
 
   const generatePromo = async () => {
     try {
       setLoading(true);
       setError(null);
-      const tagCounts = await fetchInsights();
 
-      const res = await fetch("/api/promo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tagCounts }),
-      });
+      const tagCounts = await insightService.fetchInsights();
+      const result = await insightService.generatePromo(tagCounts);
 
-      const result = await res.json();
       const aiContent = result.choices?.[0]?.message?.content;
-      const parsed = safeJsonParse(aiContent);
+      const parsed = insightService.safeJsonParse(aiContent);
 
-      let validatedIdeas = [];
+      let validatedIdeas: PromoIdea[] = [];
 
       if (Array.isArray(parsed)) {
         validatedIdeas = parsed;
-      } else if (parsed && Array.isArray(parsed.promotions)) {
-        // If AI wrapped the response inside property 'promotions'
+      } else if (parsed?.promotions) {
         validatedIdeas = parsed.promotions;
-      } else if (parsed && typeof parsed === "object") {
-        // If AI wrapped the response inside other property lain
+      } else if (typeof parsed === "object") {
         const firstKey = Object.keys(parsed)[0];
         if (Array.isArray(parsed[firstKey])) {
           validatedIdeas = parsed[firstKey];
@@ -101,32 +64,13 @@ const PromoIdeasPage = () => {
 
       if (validatedIdeas.length > 0) {
         setIdeas(validatedIdeas);
-        localStorage.setItem(
-          "latest_ai_promo",
-          JSON.stringify({
-            ideas: validatedIdeas,
-            createdAt: new Date().getTime(),
-          }),
-        );
+        insightService.savePromo(validatedIdeas);
       }
-    } catch (err) {
+    } catch {
       setError("Oops! System failed to brew your ideas. Please try again.");
       showToast("Something went wrong.", "error");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const safeJsonParse = (rawString: string) => {
-    try {
-      const cleanString = rawString
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
-      return JSON.parse(cleanString);
-    } catch (error) {
-      showToast("Something went wrong.", "error");
-      return [];
     }
   };
 
@@ -137,7 +81,7 @@ const PromoIdeasPage = () => {
   };
 
   const clearPromoIdeaData = () => {
-    localStorage.removeItem("latest_ai_promo");
+    insightService.clearPromo();
     setIdeas([]);
     setIsClearModalOpen(false);
   };

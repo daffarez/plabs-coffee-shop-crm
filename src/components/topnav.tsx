@@ -2,7 +2,15 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/src/lib/supabase";
-import { Users, Sparkles, LogOut, Coffee, UserCircle } from "lucide-react";
+import {
+  Users,
+  Sparkles,
+  LogOut,
+  Coffee,
+  UserCircle,
+  Menu,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useLoadingStore } from "../store/useloadingstore";
@@ -12,8 +20,17 @@ export const TopNav = () => {
   const [userEmail, setUserEmail] = useState<string>("User");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const { startLoading, stopLoading } = useLoadingStore();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [isMobileOpen]);
 
   useEffect(() => {
     getUser();
@@ -89,6 +106,13 @@ export const TopNav = () => {
             </div>
 
             <button
+              className="md:hidden"
+              onClick={() => setIsMobileOpen(!isMobileOpen)}
+            >
+              {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+
+            <button
               onClick={() => setIsLogoutModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-red-500 hover:bg-red-50 transition-all text-sm group border border-transparent hover:border-red-100"
             >
@@ -101,6 +125,36 @@ export const TopNav = () => {
           </div>
         </div>
       </nav>
+
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsMobileOpen(false)}
+          />
+
+          <div className="absolute top-16 left-0 right-0 bg-white shadow-xl border-t border-[#EBE3D5] animate-in slide-in-from-top-2 duration-200">
+            <div className="px-6 py-6 space-y-5">
+              {menuItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMobileOpen(false)}
+                    className={`block text-base font-bold ${
+                      isActive ? "text-[#D2691E]" : "text-[#7E6363]"
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
