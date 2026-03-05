@@ -9,6 +9,7 @@ import { useLoadingStore } from "@/src/store/useloadingstore";
 import { useToastStore } from "@/src/store/usetoaststore";
 import { ConfirmModal } from "@/src/components/confirmmodal";
 import { saveCustomer, deleteCustomer } from "@/src/services/customer.service";
+import { Plus, X } from "lucide-react";
 
 type Customer = {
   id: string;
@@ -50,6 +51,7 @@ const CustomerPage = () => {
     null,
   );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const pageSize = 10;
 
@@ -99,58 +101,6 @@ const CustomerPage = () => {
     } finally {
       setIsFetching(false);
     }
-  };
-
-  const parseTags = (input: string): string[] => {
-    return input
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-  };
-
-  const ensureTagsExist = async (tagNames: string[]): Promise<string[]> => {
-    if (tagNames.length === 0) return [];
-
-    const { data: existing, error: fetchError } = await supabase
-      .from("interest_tags")
-      .select("id, name")
-      .in("name", tagNames);
-
-    if (fetchError) throw fetchError;
-
-    const existingMap = new Map<string, string>(
-      existing?.map((tag) => [tag.name, tag.id]) || [],
-    );
-
-    const newTags = tagNames.filter((name) => !existingMap.has(name));
-
-    if (newTags.length > 0) {
-      const { data: inserted, error: insertError } = await supabase
-        .from("interest_tags")
-        .insert(newTags.map((name) => ({ name })))
-        .select("id, name");
-
-      if (insertError) throw insertError;
-
-      inserted?.forEach((tag) => {
-        existingMap.set(tag.name, tag.id);
-      });
-    }
-
-    return tagNames.map((name) => existingMap.get(name)!);
-  };
-
-  const syncCustomerTags = async (customerId: string, tagIds: string[]) => {
-    await supabase.from("customer_tags").delete().eq("customer_id", customerId);
-
-    if (tagIds.length === 0) return;
-
-    await supabase.from("customer_tags").insert(
-      tagIds.map((tagId) => ({
-        customer_id: customerId,
-        tag_id: tagId,
-      })),
-    );
   };
 
   const handleConfirmDelete = async () => {
@@ -268,6 +218,16 @@ const CustomerPage = () => {
     }
   };
 
+  const handleSubmitWithClose = async () => {
+    await handleSubmit();
+    setIsFormOpen(false);
+  };
+
+  const onClickEditAndOpen = (data: Customer) => {
+    onClickEditButton(data);
+    setIsFormOpen(true);
+  };
+
   useEffect(() => {
     const loadData = async () => {
       if (!isFilter) {
@@ -313,6 +273,15 @@ const CustomerPage = () => {
             Customers
           </h1>
         </div>
+        <button
+          onClick={() => {
+            onClickCancelEditButton();
+            setIsFormOpen(true);
+          }}
+          className="md:hidden p-3 bg-[#D2691E] text-white rounded-full shadow-lg active:scale-95 transition-all"
+        >
+          <Plus size={24} />
+        </button>
       </div>
 
       <CustomerSearchFilters
@@ -323,20 +292,55 @@ const CustomerPage = () => {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <CustomerForm
-          editingId={editingId}
-          formData={formData}
-          errors={errors}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          onClickCancelEditButton={onClickCancelEditButton}
-        />
+        <div
+          className={`
+    fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm transition-all duration-300
+    ${isFormOpen ? "opacity-100 visible" : "opacity-0 invisible"}
+    
+    /* Desktop: Sidebar Mode (Kembali ke Normal) */
+    lg:relative lg:inset-auto lg:z-0 lg:bg-transparent lg:backdrop-blur-none lg:flex lg:items-start lg:opacity-100 lg:visible
+  `}
+        >
+          <div
+            className={`
+      /* Mobile Content Style */
+      bg-white w-full max-h-[90vh] overflow-y-auto rounded-t-3xl p-6 shadow-2xl transition-transform duration-300 transform
+      ${isFormOpen ? "translate-y-0" : "translate-y-full"}
+      
+      /* Desktop Content Style */
+      lg:shadow-none lg:p-0 lg:rounded-none lg:bg-transparent lg:max-h-none lg:translate-y-0 lg:w-full
+    `}
+          >
+            <div className="flex justify-between items-center mb-4 lg:hidden border-b pb-4">
+              <h2 className="font-bold text-[#2D2424]">
+                {editingId ? "Edit Customer" : "New Customer"}
+              </h2>
+              <button
+                onClick={() => setIsFormOpen(false)}
+                className="p-1 text-gray-400"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <CustomerForm
+              editingId={editingId}
+              formData={formData}
+              errors={errors}
+              handleChange={handleChange}
+              handleSubmit={handleSubmitWithClose}
+              onClickCancelEditButton={() => {
+                onClickCancelEditButton();
+                setIsFormOpen(false);
+              }}
+            />
+          </div>
+        </div>
 
         <div className="lg:col-span-2 space-y-4">
           <CustomerList
             customers={customers}
             isFetching={isFetching}
-            onClickEditButton={onClickEditButton}
+            onClickEditButton={onClickEditAndOpen}
             onClickDeleteButton={onClickDeleteButton}
             totalCount={totalCount}
             pageSize={pageSize}

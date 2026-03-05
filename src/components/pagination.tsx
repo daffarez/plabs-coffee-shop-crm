@@ -19,7 +19,7 @@ export const Pagination = ({
 
   return (
     <div className="flex items-center justify-between px-2 py-4 border-t border-[#EBE3D5] mt-4">
-      <p className="text-xs text-[#7E6363] font-medium">
+      <p className="text-xs text-[#7E6363] font-medium mr-2.5">
         Showing{" "}
         <span className="text-[#2D2424] font-bold">
           {(currentPage - 1) * pageSize + 1}

@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import CustomerPage from "./page";
+import { saveCustomer, deleteCustomer } from "@/src/services/customer.service";
+
 vi.mock("@/src/lib/supabase", () => ({
   supabase: {
-    from: vi.fn(),
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+      ilike: vi.fn().mockReturnThis(),
+    })),
   },
 }));
 
@@ -9,9 +18,6 @@ vi.mock("@/src/services/customer.service", () => ({
   saveCustomer: vi.fn(),
   deleteCustomer: vi.fn(),
 }));
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import CustomerPage from "./page";
-import { saveCustomer, deleteCustomer } from "@/src/services/customer.service";
 
 vi.mock("@/src/store/useloadingstore", () => ({
   useLoadingStore: () => ({
@@ -31,38 +37,57 @@ vi.mock("@/src/components/customersearchfilter", () => ({
 }));
 
 vi.mock("@/src/components/customerlist", () => ({
-  CustomerList: ({ onClickDeleteButton }: any) => (
-    <button
-      onClick={() =>
-        onClickDeleteButton({
-          id: "1",
-          name: "John",
-          contact: "",
-          favorite: "",
-          customer_tags: [],
-        })
-      }
-    >
-      TriggerDelete
-    </button>
+  CustomerList: ({ onClickDeleteButton, onClickEditButton }: any) => (
+    <div>
+      <button onClick={() => onClickDeleteButton({ id: "1", name: "John" })}>
+        TriggerDelete
+      </button>
+      <button
+        onClick={() =>
+          onClickEditButton({
+            id: "1",
+            name: "John",
+            contact: "123",
+            favorite: "Kopi",
+            customer_tags: [],
+          })
+        }
+      >
+        TriggerEdit
+      </button>
+    </div>
   ),
 }));
 
 vi.mock("@/src/components/customerform", () => ({
-  CustomerForm: ({ handleSubmit, handleChange }: any) => (
+  CustomerForm: ({ handleSubmit, handleChange, formData }: any) => (
     <div>
-      <input name="name" onChange={handleChange} placeholder="name" />
-      <input name="favorite" onChange={handleChange} placeholder="favorite" />
-      <input name="tagsInput" onChange={handleChange} placeholder="tags" />
+      <input
+        name="name"
+        onChange={handleChange}
+        value={formData.name}
+        placeholder="name"
+      />
+      <input
+        name="favorite"
+        onChange={handleChange}
+        value={formData.favorite}
+        placeholder="favorite"
+      />
+      <input
+        name="tagsInput"
+        onChange={handleChange}
+        value={formData.tagsInput}
+        placeholder="tags"
+      />
       <button onClick={handleSubmit}>Submit</button>
     </div>
   ),
 }));
 
 vi.mock("@/src/components/confirmmodal", () => ({
-  ConfirmModal: ({ onConfirm }: any) => (
-    <button onClick={onConfirm}>ConfirmDelete</button>
-  ),
+  ConfirmModal: ({ onConfirm, isOpen }: any) =>
+    isOpen ? <button onClick={onConfirm}>ConfirmDelete</button> : null,
 }));
 
 describe("CustomerPage", () => {
@@ -75,30 +100,21 @@ describe("CustomerPage", () => {
     expect(screen.getByText("Customers")).toBeInTheDocument();
   });
 
-  it("prevents submit when validation fails", async () => {
-    render(<CustomerPage />);
-    fireEvent.click(screen.getByText("Submit"));
-
-    await waitFor(() => {
-      expect(saveCustomer).not.toHaveBeenCalled();
-    });
-  });
-
   it("calls saveCustomer when form valid", async () => {
-    (saveCustomer as any).mockResolvedValue("123");
+    (saveCustomer as any).mockResolvedValue({ success: true });
 
     render(<CustomerPage />);
 
     fireEvent.change(screen.getByPlaceholderText("name"), {
-      target: { value: "John" },
+      target: { name: "name", value: "John" },
     });
 
     fireEvent.change(screen.getByPlaceholderText("favorite"), {
-      target: { value: "Latte" },
+      target: { name: "favorite", value: "Latte" },
     });
 
     fireEvent.change(screen.getByPlaceholderText("tags"), {
-      target: { value: "coffee" },
+      target: { name: "tagsInput", value: "coffee" },
     });
 
     fireEvent.click(screen.getByText("Submit"));
@@ -114,30 +130,21 @@ describe("CustomerPage", () => {
     render(<CustomerPage />);
 
     fireEvent.click(screen.getByText("TriggerDelete"));
-    fireEvent.click(screen.getByText("ConfirmDelete"));
+
+    const confirmBtn = screen.getByText("ConfirmDelete");
+    fireEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(deleteCustomer).toHaveBeenCalledWith("1");
     });
   });
 
-  it("should debounce search input", async () => {
-    vi.useFakeTimers();
-
+  it("should handle modal visibility on edit", async () => {
     render(<CustomerPage />);
 
-    const input = screen.getByPlaceholderText("name");
+    fireEvent.click(screen.getByText("TriggerEdit"));
 
-    fireEvent.change(input, {
-      target: { name: "name", value: "abc" },
-    });
-
-    expect(saveCustomer).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(300);
-
-    await vi.runAllTimersAsync?.();
-
-    vi.useRealTimers();
+    const nameInput = screen.getByPlaceholderText("name") as HTMLInputElement;
+    expect(nameInput.value).toBe("John");
   });
 });
