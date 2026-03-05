@@ -1,16 +1,32 @@
-# PLABS Coffee Shop CRM — AI Global Promo Helper
+# PLABS Assignment - Coffee Shop CRM
 
-Mini CRM application for PLABS Coffee Shop.
+A modern CRM dashboard built for coffee shop businesses to manage customers, analyze interests, and generate AI-powered promotional campaigns.
 
-## Features (Current Progress)
+### Features
 
 - Authentication (Supabase)
-- Protected routing
-- Dashboard page
-- Customers CRUD
-- Promo Idea generation with OpenRouter AI
+- Customer Management (CRUD + Interest Tags)
+- Analytics Dashboard
+  - Total Customers
+  - Top Interests
+  - Suggested Campaign
+- AI Promo Generator
+- ChatBot Dashboard
 
-## Environment Variables
+---
+
+### Tech Stack
+
+- **Next.js (App Router)**
+- **TypeScript**
+- **Supabase**
+- **TailwindCSS**
+- **Zustand (State Management)**
+- **Vitest + Testing Library**
+
+---
+
+### Environment Variables
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=...
@@ -18,8 +34,26 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 OPENROUTER_API_KEY=...
 ```
 
-## Run Development Server
 
-```
+### Run Development Server
+
+```bash
 npm run dev
 ```
+
+
+### Running Tests
+
+```bash
+npm run test
+npm run test:coverage
+```
+
+
+### Deployment
+
+Deployed via Vercel
+
+---
+
+#### © 2026 Daffarez Elguska
